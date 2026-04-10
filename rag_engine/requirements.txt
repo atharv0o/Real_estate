@@ -1,0 +1,47 @@
+# Server
+fastapi==0.111.0
+uvicorn[standard]==0.30.0
+
+# Env
+python-dotenv==1.0.1
+
+# HTTP
+httpx==0.27.0
+
+# 🔥 LLM (Groq via OpenAI-compatible API)
+openai==1.30.1
+langchain==0.2.6
+langchain-core==0.2.43
+langchain-community==0.2.6
+langchain-openai==0.1.8
+
+# Vector DB (FIXED VERSION)
+faiss-cpu==1.8.0
+
+# Embeddings
+sentence-transformers==2.7.0
+transformers==4.40.2
+torch==2.3.0
+
+# Tokenization
+tiktoken==0.7.0
+
+# ML / Data
+numpy==1.26.4
+scikit-learn==1.4.1.post1
+pandas==2.2.1
+
+# Utils
+tqdm==4.66.2
+
+# Validation
+pydantic==2.7.0
+
+# Optional logging
+langsmith==0.1.112
+
+# Fix protobuf issues
+protobuf==4.25.3
+
+# Blockchain (optional but safe)
+py-algorand-sdk==2.6.0

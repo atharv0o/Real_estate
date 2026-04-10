@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    ports:
+      - "8000:8000"
+
+  rag:
+    build:
+      context: ..
+      dockerfile: docker/rag.Dockerfile
+    ports:
+      - "8001:8001"

@@ -1,0 +1,124 @@
+real-estate-land-radius/
+│
+├── frontend/                          # React / Next.js
+│   ├── components/
+│   │   ├── MapView.jsx                # Google Map + radius circle
+│   │   ├── SearchBar.jsx              # Location input
+│   │   ├── PropertyCard.jsx
+│   │   ├── Filters.jsx                # radius, price, etc.
+│   │   └── Charts.jsx
+│   │
+│   ├── pages/
+│   │   └── index.jsx
+│   │
+│   ├── services/
+│   │   └── api.js                    # API calls
+│   │
+│   └── styles/
+│
+│
+├── backend/                           # FastAPI (MAIN ORCHESTRATOR)
+│   ├── app/
+│   │   ├── main.py
+│   │
+│   │   ├── routes/
+│   │   │   ├── location.py           # map + coordinates
+│   │   │   ├── land_search.py        # 🔥 radius-based search
+│   │   │   ├── property_details.py
+│   │   │   └── ai_insights.py
+│   │
+│   │   ├── services/
+│   │   │   ├── maps_service.py       # Google Maps API
+│   │   │   ├── geo_service.py        # 🔥 radius logic (Haversine / PostGIS)
+│   │   │   ├── land_service.py       # DB queries
+│   │   │   ├── rag_connector.py      # connect to RAG engine
+│   │   │   └── blockchain_service.py
+│   │
+│   │   ├── models/
+│   │   │   ├── land_models.py        # land schema
+│   │   │   ├── request_models.py
+│   │   │   └── response_models.py
+│   │
+│   │   ├── db/
+│   │   │   ├── postgres.py
+│   │   │   └── geo_index.sql         # 🔥 spatial index
+│   │
+│   │   └── config/
+│   │       └── settings.py
+│   │
+│   ├── requirements.txt
+│   └── venv/
+│
+│
+├── rag_engine/                        # 🔥 FULLY ISOLATED AI
+│   ├── ingestion/
+│   │   ├── land_scraper.py           # scrape land listings
+│   │   ├── rera_scraper.py
+│   │   └── cleaner.py
+│   │
+│   ├── embeddings/
+│   │   ├── embedder.py
+│   │   └── vector_store.py
+│   │
+│   ├── retrieval/
+│   │   └── retriever.py
+│   │
+│   ├── generation/
+│   │   └── summarizer.py             # price trends, insights
+│   │
+│   ├── pipeline/
+│   │   ├── rag_pipeline.py
+│   │   └── scheduler.py              # daily updates
+│   │
+│   ├── api/                          # optional microservice
+│   │   └── rag_api.py
+│   │
+│   ├── requirements.txt
+│   └── venv/
+│
+│
+├── blockchain/                       # Algorand layer
+│   ├── contracts/
+│   │   └── land_verification.teal
+│   │
+│   ├── services/
+│   │   └── verifier.py
+│   │
+│   ├── scripts/
+│   │   ├── register_land.py
+│   │   └── verify_land.py
+│   │
+│   └── requirements.txt
+│
+│
+├── data_pipeline/                    # 🔥 IMPORTANT NEW ADDITION
+│   ├── collectors/
+│   │   ├── listing_collector.py
+│   │   └── govt_registry_collector.py
+│   │
+│   ├── processors/
+│   │   ├── geo_encoder.py           # convert address → lat/lng
+│   │   ├── deduplicator.py
+│   │   └── validator.py
+│   │
+│   ├── loaders/
+│   │   ├── db_loader.py
+│   │   └── vector_loader.py
+│   │
+│   ├── scheduler.py
+│   └── requirements.txt
+│
+│
+├── shared/
+│   ├── utils.py
+│   ├── logger.py
+│   └── constants.py
+│
+│
+├── docker/
+│   ├── backend.Dockerfile
+│   ├── rag.Dockerfile
+│   ├── db.Dockerfile
+│   └── docker-compose.yml
+│
+└── README.md
