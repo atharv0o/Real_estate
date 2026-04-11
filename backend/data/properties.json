@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Plot in Pune",
+    "price": 500000,
+    "lat": 18.5204,
+    "lng": 73.8567,
+    "location": "Pune"
+  },
+  {
+    "id": 2,
+    "title": "Plot in Kolhapur",
+    "price": 300000,
+    "lat": 16.705,
+    "lng": 74.243,
+    "location": "Kolhapur"
+  },
+  {
+    "id": 3,
+    "title": "Plot in Mumbai",
+    "price": 1000000,
+    "lat": 19.076,
+    "lng": 72.8777,
+    "location": "Mumbai"
+  }
+]
