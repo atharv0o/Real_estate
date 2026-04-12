@@ -1,13 +1,7 @@
-import requests
+from __future__ import annotations
 
-BLOCKCHAIN_URL = "http://127.0.0.1:8002/verify"
+from app.services.blockchain_service import verify_property as verify_land_property
 
-def verify_property(data):
-    try:
-        res = requests.post(BLOCKCHAIN_URL, json=data)
-        return res.json()
-    except Exception as e:
-        return {
-            "verified": False,
-            "error": str(e)
-        }
+
+def verify_property(data: dict) -> dict:
+    return verify_land_property(data)

@@ -1,25 +1,7 @@
-import json
-from app.services.geo_utils import haversine
+from __future__ import annotations
 
-DATA_FILE = "data/properties.json"
+from app.services.property_service import get_nearby_properties
 
-def load_data():
-    with open(DATA_FILE, "r") as f:
-        return json.load(f)
 
-def get_properties(lat, lng, radius):
-    data = load_data()
-
-    result = []
-
-    for prop in data:
-        distance = haversine(lat, lng, prop["lat"], prop["lng"])
-
-        if distance <= radius:
-            prop["distance_km"] = round(distance, 2)
-            result.append(prop)
-
-    return {
-        "count": len(result),
-        "properties": result
-    }
+def get_properties(lat: float, lng: float, radius: float) -> dict:
+    return get_nearby_properties(lat=lat, lng=lng, radius_km=radius)

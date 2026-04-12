@@ -1,10 +1,30 @@
 version: "3.9"
 
 services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-real_estate}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   backend:
     build:
       context: ..
       dockerfile: docker/backend.Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_HOST: db
+      RAG_QUERY_URL: http://rag:8001/rag-query
+      RAG_REFRESH_URL: http://rag:8001/refresh-index
+    depends_on:
+      - db
+      - rag
     ports:
       - "8000:8000"
 
@@ -12,5 +32,28 @@ services:
     build:
       context: ..
       dockerfile: docker/rag.Dockerfile
+    env_file:
+      - ../.env
+    depends_on:
+      - db
     ports:
       - "8001:8001"
+
+  data_pipeline:
+    build:
+      context: ..
+      dockerfile: docker/data_pipeline.Dockerfile
+    env_file:
+      - ../.env
+    environment:
+      POSTGRES_HOST: db
+      RAG_REFRESH_URL: http://rag:8001/refresh-index
+      BLOCKCHAIN_SERVICE_URL: http://host.docker.internal:8002/verify
+    depends_on:
+      - db
+      - backend
+      - rag
+    command: ["python", "data_pipeline/scheduler.py"]
+
+volumes:
+  postgres_data:
