@@ -11,7 +11,7 @@ import {
 } from "recharts";
 
 export type PriceChartProps = {
-  data: { month: string; value: number }[];
+  data: { label?: string; month?: string; value: number }[];
   className?: string;
 };
 
@@ -20,12 +20,16 @@ export type PriceChartProps = {
  */
 export function PriceChart({ data, className = "" }: PriceChartProps) {
   if (!data?.length) return null;
+  const normalizedData = data.map((item) => ({
+    label: item.label ?? item.month ?? "Value",
+    value: item.value
+  }));
 
   return (
     <div className={`h-64 w-full rounded-2xl border border-white/10 bg-slate-900/40 p-4 ${className}`}>
       <p className="mb-2 text-sm font-medium text-slate-300">Price trend (₹ / sq ft)</p>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <AreaChart data={normalizedData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="priceFill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
@@ -34,7 +38,7 @@ export function PriceChart({ data, className = "" }: PriceChartProps) {
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
           <XAxis
-            dataKey="month"
+            dataKey="label"
             tick={{ fill: "#94a3b8", fontSize: 11 }}
             axisLine={false}
             tickLine={false}

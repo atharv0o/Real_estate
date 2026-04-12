@@ -1,25 +1,104 @@
-import axios, { type AxiosError } from "axios";
+import axios, { AxiosError } from "axios";
 
 import { API_BASE_URL } from "./constants";
-import type { PropertySearchParams, PropertyData } from "@/types/property";
+import type {
+  AiInsight,
+  ApiEnvelope,
+  Coordinates,
+  LocationQuery,
+  PropertyData,
+  PropertyFilters,
+  PropertyRecord,
+  PropertySearchParams
+} from "@/types/property";
 
-/**
- * Axios client for the RealestateRag backend.
- * Base URL defaults to http://localhost:5000 (override via NEXT_PUBLIC_API_URL).
- */
+const REQUEST_TIMEOUT_MS = 15_000;
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
-  timeout: 30_000
+  timeout: REQUEST_TIMEOUT_MS
 });
 
-/** Deterministic mock when backend is unavailable or NEXT_PUBLIC_USE_MOCK_API=true */
+function normalizeError(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const axiosError = error as AxiosError<{ error?: string; message?: string }>;
+    return (
+      axiosError.response?.data?.error ||
+      axiosError.response?.data?.message ||
+      axiosError.message ||
+      "Request failed"
+    );
+  }
+  if (error instanceof Error) return error.message;
+  return "Something went wrong";
+}
+
+async function unwrapResponse<T>(request: Promise<{ data: ApiEnvelope<T> }>): Promise<T> {
+  const response = await request;
+  const payload = response.data;
+  if (!payload.success) {
+    throw new Error(payload.error || "Request failed");
+  }
+  return payload.data;
+}
+
+function buildLocationQuery(query: LocationQuery): string {
+  return [query.area, query.city, query.district, query.pinCode, query.landAreaCode]
+    .filter(Boolean)
+    .join(", ");
+}
+
+export async function resolveLocation(query: LocationQuery): Promise<Coordinates> {
+  return unwrapResponse(
+    apiClient.get<ApiEnvelope<Coordinates>>("/api/location", {
+      params: { query: buildLocationQuery(query) }
+    })
+  );
+}
+
+export async function searchLand(
+  coords: Pick<Coordinates, "lat" | "lng">,
+  filters: PropertyFilters
+): Promise<PropertyRecord[]> {
+  return unwrapResponse(
+    apiClient.get<ApiEnvelope<PropertyRecord[]>>("/api/land/search", {
+      params: {
+        lat: coords.lat,
+        lng: coords.lng,
+        radius: filters.radius,
+        min_price: filters.minPrice,
+        max_price: filters.maxPrice
+      }
+    })
+  );
+}
+
+export async function fetchPropertyById(propertyId: string): Promise<PropertyRecord> {
+  return unwrapResponse(
+    apiClient.get<ApiEnvelope<PropertyRecord>>(`/api/property/${propertyId}`)
+  );
+}
+
+export async function fetchAiInsights(
+  locationLabel: string,
+  properties: PropertyRecord[]
+): Promise<AiInsight> {
+  return unwrapResponse(
+    apiClient.post<ApiEnvelope<AiInsight>>("/api/ai-insights", {
+      query: `Provide real estate insights for ${locationLabel}.`,
+      location: locationLabel,
+      properties
+    })
+  );
+}
+
+export function getApiErrorMessage(error: unknown): string {
+  return normalizeError(error);
+}
+
 export function getMockPropertyData(params: PropertySearchParams): PropertyData {
-  const slug = [
-    params.area,
-    params.city,
-    params.district
-  ]
+  const slug = [params.area, params.city, params.district]
     .filter(Boolean)
     .join("-")
     .toLowerCase()
@@ -31,7 +110,7 @@ export function getMockPropertyData(params: PropertySearchParams): PropertyData 
     pricePerSqFt: 8450 + (params.pinCode.length % 7) * 120,
     trend: "up",
     trendPercent: 3.2,
-    imageUrl: `https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80`,
+    imageUrl: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80",
     freshnessHours: 6,
     blockchainVerified: true,
     priceHistory: [
@@ -45,38 +124,29 @@ export function getMockPropertyData(params: PropertySearchParams): PropertyData 
   };
 }
 
-/**
- * Fetches aggregated property / area intelligence from the backend.
- * GET /api/property-data?district=...&city=...
- *
- * Set NEXT_PUBLIC_USE_MOCK_API=true to skip the network (local demos without a server).
- */
-export async function fetchPropertyData(
-  params: PropertySearchParams
-): Promise<PropertyData> {
-  if (process.env.NEXT_PUBLIC_USE_MOCK_API === "true") {
-    await new Promise((r) => setTimeout(r, 600));
+export async function fetchPropertyData(params: PropertySearchParams): Promise<PropertyData> {
+  const properties = await searchLand(
+    await resolveLocation(params),
+    { radius: 5, minPrice: undefined, maxPrice: undefined }
+  );
+
+  if (properties.length === 0) {
     return getMockPropertyData(params);
   }
 
-  const { data } = await apiClient.get<PropertyData>("/api/property-data", {
-    params: {
-      district: params.district,
-      city: params.city,
-      area: params.area,
-      pinCode: params.pinCode,
-      landAreaCode: params.landAreaCode
-    }
-  });
-  return data;
-}
-
-/** Typed error helper for UI */
-export function getApiErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    const ax = error as AxiosError<{ message?: string }>;
-    return ax.response?.data?.message ?? ax.message ?? "Request failed";
-  }
-  if (error instanceof Error) return error.message;
-  return "Something went wrong";
+  const first = properties[0];
+  return {
+    id: String(first.external_id ?? first.id),
+    areaName: first.title,
+    pricePerSqFt: Number(first.price_numeric ?? 0),
+    trend: "up",
+    trendPercent: 0,
+    imageUrl: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80",
+    freshnessHours: 1,
+    blockchainVerified: Boolean(first.blockchain_verified),
+    priceHistory: properties.slice(0, 6).map((property, index) => ({
+      month: `P${index + 1}`,
+      value: Number(property.price_numeric ?? 0)
+    }))
+  };
 }

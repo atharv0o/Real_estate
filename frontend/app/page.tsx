@@ -1,9 +1,12 @@
-import { SearchBar } from "@/components/SearchBar";
+import { HomeClient } from "./HomeClient";
 
 /**
  * Hero landing: glassmorphism search form → navigates to /search with query params.
  */
 export default function HomePage() {
+  return <HomeClient />;
+}
+/*
   return (
     <div className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 bg-grid opacity-30" />
@@ -60,3 +63,4 @@ export default function HomePage() {
     </div>
   );
 }
+*/

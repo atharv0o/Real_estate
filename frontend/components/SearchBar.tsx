@@ -1,20 +1,20 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useState } from "react";
 
 import { MIN_AREA_LENGTH, PIN_CODE_REGEX } from "@/lib/constants";
-import type { PropertySearchParams } from "@/types/property";
+import { getApiErrorMessage, resolveLocation } from "@/lib/api";
+import type { Coordinates, LocationQuery } from "@/types/property";
 
 export type SearchBarProps = {
-  /** Optional initial values when editing */
-  initialValues?: Partial<PropertySearchParams>;
+  initialValues?: Partial<LocationQuery>;
+  onResolved?: (coords: Coordinates, query: LocationQuery) => void;
   className?: string;
 };
 
-type FieldErrors = Partial<Record<keyof PropertySearchParams, string>>;
+type FieldErrors = Partial<Record<keyof LocationQuery, string>>;
 
-function validate(values: PropertySearchParams): FieldErrors {
+function validate(values: LocationQuery): FieldErrors {
   const errors: FieldErrors = {};
 
   if (!values.district.trim()) errors.district = "District is required";
@@ -32,9 +32,8 @@ function validate(values: PropertySearchParams): FieldErrors {
   return errors;
 }
 
-export function SearchBar({ initialValues, className = "" }: SearchBarProps) {
-  const router = useRouter();
-  const [values, setValues] = useState<PropertySearchParams>({
+export function SearchBar({ initialValues, onResolved, className = "" }: SearchBarProps) {
+  const [values, setValues] = useState<LocationQuery>({
     district: initialValues?.district ?? "",
     city: initialValues?.city ?? "",
     area: initialValues?.area ?? "",
@@ -42,18 +41,20 @@ export function SearchBar({ initialValues, className = "" }: SearchBarProps) {
     landAreaCode: initialValues?.landAreaCode ?? ""
   });
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const onChange =
-    (key: keyof PropertySearchParams) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (key: keyof LocationQuery) =>
+    (e: ChangeEvent<HTMLInputElement>) => {
       setValues((v) => ({ ...v, [key]: e.target.value }));
       setErrors((er) => ({ ...er, [key]: undefined }));
     };
 
   const onSubmit = useCallback(
-    (e: FormEvent) => {
+    async (e: FormEvent) => {
       e.preventDefault();
-      const next: PropertySearchParams = {
+      const next: LocationQuery = {
         district: values.district.trim(),
         city: values.city.trim(),
         area: values.area.trim(),
@@ -66,16 +67,18 @@ export function SearchBar({ initialValues, className = "" }: SearchBarProps) {
         return;
       }
 
-      const q = new URLSearchParams({
-        district: next.district,
-        city: next.city,
-        area: next.area,
-        pinCode: next.pinCode,
-        landAreaCode: next.landAreaCode
-      });
-      router.push(`/search?${q.toString()}`);
+      setSubmitting(true);
+      setApiError(null);
+      try {
+        const coordinates = await resolveLocation(next);
+        onResolved?.(coordinates, next);
+      } catch (error) {
+        setApiError(getApiErrorMessage(error));
+      } finally {
+        setSubmitting(false);
+      }
     },
-    [router, values]
+    [onResolved, values]
   );
 
   const inputClass =
@@ -185,14 +188,16 @@ export function SearchBar({ initialValues, className = "" }: SearchBarProps) {
       <div className="mt-8 flex flex-wrap items-center gap-4">
         <button
           type="submit"
+          disabled={submitting}
           className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 px-8 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-sky-500/25 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-sky-400/50"
         >
-          Search area
+          {submitting ? "Resolving..." : "Search area"}
         </button>
         <span className="text-xs text-slate-500">
-          Results open on the map with your exact query preserved.
+          Results are fetched from the backend using live coordinates.
         </span>
       </div>
+      {apiError && <p className="mt-3 text-sm text-rose-400">{apiError}</p>}
     </form>
   );
 }
