@@ -13,16 +13,10 @@ logger = get_logger(__name__)
 
 
 def _build_document(record: dict) -> str:
-    return (
-        f"Title: {record['title']}\n"
-        f"Price: {record['price']} ({record['price_numeric']})\n"
-        f"Location: {record['location']}\n"
-        f"Area sqft: {record.get('area_sqft')}\n"
-        f"Owner: {record.get('owner') or 'unknown'}\n"
-        f"Registration ID: {record.get('registration_id') or 'unavailable'}\n"
-        f"Verified Registry Status: {record.get('verified_status')}\n"
-        f"Description: {record['description']}"
-    )
+    description = str(record.get("description") or "").strip()
+    location = str(record.get("location") or "").strip()
+    title = str(record.get("title") or "").strip()
+    return "\n".join(part for part in [title, location, description] if part)
 
 
 def load_vectors(records: list[dict], settings: PipelineSettings) -> int:
@@ -35,8 +29,10 @@ def load_vectors(records: list[dict], settings: PipelineSettings) -> int:
         {
             "title": record["title"],
             "location": record["location"],
-            "registration_id": record.get("registration_id"),
+            "price_numeric": record.get("price_numeric"),
             "source": record["source"],
+            "lat": record.get("lat"),
+            "lng": record.get("lng"),
         }
         for record in records
     ]

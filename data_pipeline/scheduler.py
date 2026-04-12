@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,16 +14,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend.app.services.blockchain_service import verify_land_record
 from data_pipeline.bootstrap import ensure_project_root
-from data_pipeline.collectors.govt_registry_collector import collect_registry_records
 from data_pipeline.collectors.listing_collector import collect_listings
 from data_pipeline.config import PipelineSettings
-from data_pipeline.loaders.db_loader import update_blockchain_status, upsert_records
+from data_pipeline.loaders.db_loader import upsert_records
 from data_pipeline.loaders.vector_loader import load_vectors
-from data_pipeline.processors.deduplicator import deduplicate_records
 from data_pipeline.processors.geo_encoder import GeoEncoder
-from data_pipeline.processors.validator import validate_records
 from shared.logger import get_logger
 
 ensure_project_root()
@@ -33,48 +31,124 @@ except ImportError:  # pragma: no cover
 
 
 logger = get_logger(__name__)
+PRICE_NUMBER_PATTERN = re.compile(r"\d+(?:\.\d+)?")
 
 
-def _enrich_with_registry(listings: list[dict], registry_records: list[dict]) -> list[dict]:
-    enriched_records: list[dict] = []
+def _parse_price_to_int(raw_price: Any) -> int | None:
+    if raw_price is None:
+        return None
+    if isinstance(raw_price, (int, float)):
+        value = int(float(raw_price))
+        return value if value > 0 else None
 
-    for listing in listings:
-        best_match: dict | None = None
-        best_score = 0
-        for registry_record in registry_records:
-            title_score = fuzz.token_sort_ratio(listing["title"], registry_record["title"])
-            location_score = fuzz.token_sort_ratio(listing["location"], registry_record["location"])
-            combined_score = int((title_score + location_score) / 2)
-            if combined_score > best_score:
-                best_score = combined_score
-                best_match = registry_record
+    text = str(raw_price).replace(",", " ").strip()
+    if not text:
+        return None
 
-        merged = dict(listing)
-        if best_match and best_score >= 85:
-            merged.update(
-                {
-                    "owner": best_match.get("owner"),
-                    "registration_id": best_match.get("registration_id"),
-                    "verified_status": best_match.get("verified_status"),
-                }
-            )
-        else:
-            merged.update({"owner": None, "registration_id": None, "verified_status": False})
-        enriched_records.append(merged)
+    numbers = PRICE_NUMBER_PATTERN.findall(text)
+    if not numbers:
+        return None
 
-    return enriched_records
+    base = float(numbers[0])
+    lowered = text.lower()
+    multiplier = 1
+    if "crore" in lowered or re.search(r"\bcr\b", lowered):
+        multiplier = 10_000_000
+    elif "lakh" in lowered or "lac" in lowered:
+        multiplier = 100_000
+    elif base < 10_000 and len(numbers) > 1:
+        base = float("".join(number.replace(".", "") for number in numbers))
+    value = int(base * multiplier)
+    return value if value > 0 else None
 
 
-def _geocode_records(records: list[dict], geo_encoder: GeoEncoder) -> list[dict]:
-    geocoded: list[dict] = []
+def _parse_area_sqft(raw_area: Any) -> float | None:
+    if raw_area is None:
+        return None
+    if isinstance(raw_area, (int, float)):
+        value = float(raw_area)
+    else:
+        match = re.search(r"\d[\d,.]*", str(raw_area))
+        if not match:
+            return None
+        value = float(match.group(0).replace(",", ""))
+    return value if 100 <= value <= 5_000_000 else None
+
+
+def _build_clean_record(record: dict[str, Any]) -> dict[str, Any] | None:
+    title = str(record.get("title") or "").strip()
+    location = str(record.get("location") or "").strip()
+    description = str(record.get("description") or "").strip()
+    source = str(record.get("source") or "").strip()
+    price_numeric = _parse_price_to_int(record.get("price"))
+    area_sqft = _parse_area_sqft(record.get("area_sqft"))
+
+    try:
+        lat = float(record.get("lat"))
+        lng = float(record.get("lng"))
+    except (TypeError, ValueError):
+        return None
+
+    if not title or not location or not source or price_numeric is None:
+        return None
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        return None
+    if area_sqft is None:
+        return None
+
+    stable_key = f"{title.strip().lower()}|{location.strip().lower()}|{price_numeric}"
+    source_record_hash = hashlib.sha256(stable_key.encode("utf-8")).hexdigest()
+    payload = dict(record.get("raw_payload") or {})
+    payload.update(
+        {
+            "detail_url": record.get("detail_url"),
+            "coordinate_source": record.get("coordinate_source"),
+            "scraped_location": location,
+        }
+    )
+
+    return {
+        "external_id": record.get("external_id") or source_record_hash[:16],
+        "title": title,
+        "price": str(record.get("price") or price_numeric),
+        "price_numeric": price_numeric,
+        "location": location,
+        "area_sqft": area_sqft,
+        "source": source,
+        "description": description,
+        "owner": None,
+        "registration_id": None,
+        "verified_status": False,
+        "lat": lat,
+        "lng": lng,
+        "source_record_hash": source_record_hash,
+        "raw_payload": payload,
+    }
+
+
+def _deduplicate_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    deduplicated: list[dict[str, Any]] = []
+    exact_seen: set[tuple[str, str, int]] = set()
+
     for record in records:
-        try:
-            coordinates = geo_encoder.encode(record["location"])
-            geocoded.append({**record, **coordinates})
-        except Exception as exc:
-            logger.warning("Geocoding failed for %s: %s", record.get("title"), exc)
-            geocoded.append(record)
-    return geocoded
+        exact_key = (record["title"].lower(), record["location"].lower(), int(record["price_numeric"]))
+        if exact_key in exact_seen:
+            continue
+
+        duplicate = False
+        record_fingerprint = f"{record['title']} {record['location']} {record['price_numeric']}"
+        for existing in deduplicated:
+            existing_fingerprint = f"{existing['title']} {existing['location']} {existing['price_numeric']}"
+            if fuzz.token_sort_ratio(record_fingerprint, existing_fingerprint) > 90:
+                duplicate = True
+                break
+        if duplicate:
+            continue
+
+        exact_seen.add(exact_key)
+        deduplicated.append(record)
+
+    return deduplicated
 
 
 def run_pipeline() -> dict[str, Any]:
@@ -82,70 +156,54 @@ def run_pipeline() -> dict[str, Any]:
     geo_encoder = GeoEncoder(settings)
     summary: dict[str, Any] = {
         "started_at": datetime.now(timezone.utc).isoformat(),
-        "collected": 0,
-        "deduplicated": 0,
-        "validated": 0,
-        "rejected": 0,
-        "db_upserted": 0,
-        "vectors_loaded": 0,
-        "blockchain_verified": 0,
+        "total_pages_scraped": 0,
+        "raw_listings_found": 0,
+        "valid_listings": 0,
+        "coordinates_extracted": 0,
+        "inserted_into_db": 0,
+        "sent_to_rag": 0,
         "errors": [],
     }
 
-    try:
-        listings = collect_listings(settings)
-        registry = collect_registry_records()
-        summary["collected"] = len(listings)
-    except Exception as exc:
-        logger.exception("Collection stage failed.")
-        summary["errors"].append(f"collection_failed: {exc}")
-        return summary
+    collector_result = collect_listings(settings, geo_encoder)
+    summary["total_pages_scraped"] = collector_result.total_pages_scraped
+    summary["raw_listings_found"] = collector_result.raw_listings_found
+    summary["coordinates_extracted"] = collector_result.coordinates_extracted
+    summary["errors"].extend(collector_result.errors)
 
-    try:
-        enriched = _enrich_with_registry(listings, registry)
-        geocoded = _geocode_records(enriched, geo_encoder)
-        deduplicated = deduplicate_records(geocoded)
-        summary["deduplicated"] = len(deduplicated)
-    except Exception as exc:
-        logger.exception("Processing stage failed.")
-        summary["errors"].append(f"processing_failed: {exc}")
-        return summary
+    strict_records = []
+    for record in collector_result.listings:
+        clean_record = _build_clean_record(record)
+        if clean_record:
+            strict_records.append(clean_record)
 
-    clean_records: list[dict] = []
-    try:
-        clean_records, rejected = validate_records(deduplicated)
-        summary["validated"] = len(clean_records)
-        summary["rejected"] = len(rejected)
-    except Exception as exc:
-        logger.exception("Validation stage failed.")
-        summary["errors"].append(f"validation_failed: {exc}")
+    deduplicated = _deduplicate_records(strict_records)
+    summary["valid_listings"] = len(deduplicated)
 
-    if clean_records:
+    if deduplicated:
         try:
-            persisted = upsert_records(clean_records)
-            summary["db_upserted"] = len(persisted)
+            persisted = upsert_records(deduplicated, batch_size=50)
+            summary["inserted_into_db"] = len(persisted)
         except Exception as exc:
+            logger.exception("DB load failed.")
             summary["errors"].append(f"db_load_failed: {exc}")
 
         try:
-            summary["vectors_loaded"] = load_vectors(clean_records, settings)
+            summary["sent_to_rag"] = load_vectors(deduplicated, settings)
         except Exception as exc:
             logger.exception("Vector loading failed.")
             summary["errors"].append(f"vector_load_failed: {exc}")
 
-        if settings.enable_blockchain_hook:
-            for record in clean_records:
-                try:
-                    result = verify_land_record(record, service_url=settings.blockchain_service_url, enabled=True)
-                    if result.get("verified"):
-                        summary["blockchain_verified"] += 1
-                    update_blockchain_status(record["source_record_hash"], result)
-                except Exception as exc:
-                    logger.warning("Blockchain verification failed for %s: %s", record.get("title"), exc)
-                    summary["errors"].append(f"blockchain_failed:{record.get('external_id')}:{exc}")
-
     summary["completed_at"] = datetime.now(timezone.utc).isoformat()
-    logger.info("Pipeline run summary: %s", summary)
+    logger.info(
+        "OK %s pages scraped | %s raw listings found | %s valid | %s with coordinates | %s inserted | %s sent to RAG",
+        summary["total_pages_scraped"],
+        summary["raw_listings_found"],
+        summary["valid_listings"],
+        summary["coordinates_extracted"],
+        summary["inserted_into_db"],
+        summary["sent_to_rag"],
+    )
     return summary
 
 

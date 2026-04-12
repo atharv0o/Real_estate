@@ -10,7 +10,6 @@ from shared.logger import get_logger
 
 logger = get_logger(__name__)
 
-
 UPSERT_SQL = """
 INSERT INTO land_listings (
     external_id,
@@ -46,13 +45,10 @@ VALUES (
     %(source_record_hash)s,
     %(listing_payload)s
 )
-ON CONFLICT (source_record_hash) DO UPDATE
+ON CONFLICT (title, location, price_numeric) DO UPDATE
 SET
     external_id = EXCLUDED.external_id,
-    title = EXCLUDED.title,
     price_display = EXCLUDED.price_display,
-    price_numeric = EXCLUDED.price_numeric,
-    location = EXCLUDED.location,
     area_sqft = EXCLUDED.area_sqft,
     source = EXCLUDED.source,
     description = EXCLUDED.description,
@@ -61,12 +57,13 @@ SET
     verified_status = EXCLUDED.verified_status,
     latitude = EXCLUDED.latitude,
     longitude = EXCLUDED.longitude,
+    source_record_hash = EXCLUDED.source_record_hash,
     listing_payload = EXCLUDED.listing_payload,
     updated_at = NOW();
 """
 
 
-def upsert_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def upsert_records(records: list[dict[str, Any]], batch_size: int = 50) -> list[dict[str, Any]]:
     if not records:
         return []
 
@@ -76,19 +73,20 @@ def upsert_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
     try:
         with connection:
             with connection.cursor(cursor_factory=RealDictCursor) as cursor:
+                _ensure_upsert_constraints(cursor)
                 payloads = []
                 for record in records:
                     payload = dict(record)
                     payload["listing_payload"] = Json(record.get("raw_payload", {}))
                     payloads.append(payload)
 
-                execute_batch(cursor, UPSERT_SQL, payloads, page_size=100)
+                execute_batch(cursor, UPSERT_SQL, payloads, page_size=batch_size)
                 cursor.execute(
                     """
-                    SELECT id, external_id, title, source_record_hash, registration_id, verified_status
+                    SELECT id, external_id, title, location, price_numeric, source_record_hash
                     FROM land_listings
                     WHERE source_record_hash = ANY(%s)
-                    ORDER BY id ASC
+                    ORDER BY updated_at DESC
                     """,
                     ([record["source_record_hash"] for record in records],),
                 )
@@ -99,6 +97,15 @@ def upsert_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
         raise
     finally:
         connection.close()
+
+
+def _ensure_upsert_constraints(cursor: Any) -> None:
+    cursor.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_land_listings_title_location_price_unique
+        ON land_listings (title, location, price_numeric);
+        """
+    )
 
 
 def update_blockchain_status(source_record_hash: str, verification_result: dict[str, Any]) -> None:

@@ -1,3 +1,24 @@
+# Dependencies & Tooling
+node_modules/
+**/node_modules/
+.eslintcache
+frontend/.next/
+frontend/out/
+
+# Python specific
+**/__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Environment and Logs
 .env
-/venv
-\venv
+*.local
+**/.env*
+*.log
