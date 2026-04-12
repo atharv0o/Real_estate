@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0f1a;
+  --foreground: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-deep: #0284c7;
+  --card: rgba(15, 23, 42, 0.65);
+  --border: rgba(148, 163, 184, 0.15);
+}
+
+body {
+  color: var(--foreground);
+  background: linear-gradient(165deg, #0a0f1a 0%, #0f172a 45%, #0c1222 100%);
+  min-height: 100vh;
+}
+
+/* Subtle grid overlay for SaaS feel */
+.bg-grid {
+  background-image: linear-gradient(
+      rgba(56, 189, 248, 0.03) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
