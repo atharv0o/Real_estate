@@ -1,19 +1,23 @@
 from __future__ import annotations
 
+import os
+
 import requests
 
-from shared.logger import get_logger
+from app.core.logging import get_logger
 
 
 logger = get_logger(__name__)
+BLOCKCHAIN_API = os.getenv("BLOCKCHAIN_API", "http://127.0.0.1:8002").rstrip("/")
 
 
-def verify_land_record(data: dict, service_url: str = "http://127.0.0.1:8002/verify", enabled: bool = True) -> dict:
+def verify_land_record(data: dict, service_url: str | None = None, enabled: bool = True) -> dict:
     if not enabled:
         return {"verified": False, "skipped": True, "reason": "blockchain hook disabled"}
 
+    target_url = service_url or f"{BLOCKCHAIN_API}/verify"
     try:
-        response = requests.post(service_url, json=data, timeout=10)
+        response = requests.post(target_url, json=data, timeout=10)
         response.raise_for_status()
         payload = response.json()
         if isinstance(payload, dict):

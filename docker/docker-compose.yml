@@ -65,6 +65,15 @@ services:
       - backend
     ports:
       - "3000:3000"
+  
+  blockchain:
+    build:
+      context: ..
+      dockerfile: docker/backend.Dockerfile
+    working_dir: /app/blockchain
+    command: ["python", "api.py"]
+    ports:
+      - "8002:8002"
 
 volumes:
   postgres_data:

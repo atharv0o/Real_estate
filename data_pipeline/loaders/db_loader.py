@@ -4,8 +4,8 @@ from typing import Any
 
 from psycopg2.extras import Json, RealDictCursor, execute_batch
 
-from backend.app.db.postgres import get_connection, initialize_database
-from shared.logger import get_logger
+from data_pipeline.db.postgres import get_connection, initialize_database
+from data_pipeline.logging_utils import get_logger
 
 
 logger = get_logger(__name__)

@@ -5,8 +5,9 @@ import os
 import requests
 
 
-RAG_QUERY_URL = os.getenv("RAG_QUERY_URL", "http://localhost:8001/rag-query")
-RAG_REFRESH_URL = os.getenv("RAG_REFRESH_URL", "http://localhost:8001/refresh-index")
+RAG_API = os.getenv("RAG_API", "http://localhost:8001").rstrip("/")
+RAG_QUERY_URL = os.getenv("RAG_QUERY_URL", f"{RAG_API}/rag-query")
+RAG_REFRESH_URL = os.getenv("RAG_REFRESH_URL", f"{RAG_API}/refresh-index")
 
 
 def call_rag(query: str) -> dict:

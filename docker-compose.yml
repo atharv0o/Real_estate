@@ -1,0 +1,90 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: realestate
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d realestate"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rag_engine:
+    build: ./rag_engine
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/realestate
+      POSTGRES_DB: realestate
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      VECTOR_DIM: 384
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+
+  blockchain:
+    build: ./blockchain
+    environment:
+      ALGORAND_MNEMONIC: ${ALGORAND_MNEMONIC:-}
+      ALGORAND_NODE_URL: ${ALGORAND_NODE_URL:-https://testnet-api.algonode.cloud}
+      ALGORAND_NODE_TOKEN: ${ALGORAND_NODE_TOKEN:-}
+    ports:
+      - "8002:8002"
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/realestate
+      POSTGRES_DB: realestate
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      RAG_API: http://rag_engine:8000
+      RAG_QUERY_URL: http://rag_engine:8000/rag-query
+      RAG_REFRESH_URL: http://rag_engine:8000/refresh-index
+      BLOCKCHAIN_API: http://blockchain:8002
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rag_engine:
+        condition: service_started
+      blockchain:
+        condition: service_started
+    ports:
+      - "8000:8000"
+
+  data_pipeline:
+    build: ./data_pipeline
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/realestate
+      POSTGRES_DB: realestate
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      RAG_REFRESH_URL: http://rag_engine:8000/refresh-index
+      BLOCKCHAIN_SERVICE_URL: http://blockchain:8002/verify
+      LOG_LEVEL: INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "3000:3000"

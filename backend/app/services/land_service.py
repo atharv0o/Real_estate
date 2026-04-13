@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from backend.app.db.postgres import fetch_all_dicts, fetch_one_dict
-from backend.app.services.geo_utils import haversine
+from app.db.postgres import fetch_all_dicts, fetch_one_dict
+from app.services.geo_utils import haversine
 
 
 def get_all_land_records(limit: int = 100, offset: int = 0) -> list[dict]:

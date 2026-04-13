@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backend.app.db.postgres import fetch_all_dicts, fetch_one_dict
+from app.db.postgres import fetch_all_dicts, fetch_one_dict
 
 
 def get_property_coordinates(property_id: int | None = None, external_id: str | None = None) -> dict | None:

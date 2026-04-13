@@ -1,0 +1,156 @@
+D:\hackathon_projects\Real_estate
++---backend
+|   +---app
+|   |   +---config
+|   |   |   +---constants.py
+|   |   |   \---settings.py
+|   |   +---db
+|   |   |   \---postgres.py
+|   |   +---models
+|   |   |   +---request_models.py
+|   |   |   \---response_models.py
+|   |   +---routes
+|   |   |   +---__init__.py
+|   |   |   +---ai.py
+|   |   |   +---property.py
+|   |   |   +---rag_query.py
+|   |   |   +---search.py
+|   |   |   \---verify.py
+|   |   +---services
+|   |   |   +---__init__.py
+|   |   |   +---ai_client.py
+|   |   |   +---api_response.py
+|   |   |   +---blockchain_service.py
+|   |   |   +---data_pipeline.py
+|   |   |   +---data_service.py
+|   |   |   +---geo_service.py
+|   |   |   +---geo_utils.py
+|   |   |   +---land_service.py
+|   |   |   +---maps_service.py
+|   |   |   +---property_service.py
+|   |   |   +---rag_connector.py
+|   |   |   \---verify_service.py
+|   |   +---__init__.py
+|   |   \---main.py
+|   +---data
+|   |   \---properties.json
+|   +---instructions.txt
+|   \---requirements.txt
++---blockchain
+|   +---scripts
+|   |   +---deploy.py
+|   |   \---verify_data.py
+|   +---sdk
+|   |   +---account.py
+|   |   \---algo_client.py
+|   +---services
+|   |   +---__init__.py
+|   |   \---verifier.py
+|   +---smart_contracts
+|   |   \---property_verification.teal
+|   +---api.py
+|   \---requirements.txt
++---data_pipeline
+|   +---collectors
+|   |   +---__init__.py
+|   |   +---govt_registry_collector.py
+|   |   \---listing_collector.py
+|   +---loaders
+|   |   +---__init__.py
+|   |   +---db_loader.py
+|   |   \---vector_loader.py
+|   +---processors
+|   |   +---__init__.py
+|   |   +---deduplicator.py
+|   |   +---geo_encoder.py
+|   |   \---validator.py
+|   +---__init__.py
+|   +---bootstrap.py
+|   +---config.py
+|   +---requirements.txt
+|   \---scheduler.py
++---docker
+|   +---backend.Dockerfile
+|   +---data_pipeline.Dockerfile
+|   +---docker-compose.yml
+|   +---frontend.Dockerfile
+|   \---rag.Dockerfile
++---frontend
+|   +---app
+|   |   +---property
+|   |   |   \---[id]
+|   |   |       +---page.tsx
+|   |   |       +---PropertyDetailClient.tsx
+|   |   |       \---PropertyDetailLiveClient.tsx
+|   |   +---search
+|   |   |   +---page.tsx
+|   |   |   \---SearchContent.tsx
+|   |   +---globals.css
+|   |   +---HomeClient.tsx
+|   |   +---layout.tsx
+|   |   \---page.tsx
+|   +---components
+|   |   +---BlockchainBadge.tsx
+|   |   +---Charts.tsx
+|   |   +---ChatBox.tsx
+|   |   +---Filters.tsx
+|   |   +---FreshnessScore.tsx
+|   |   +---Map.tsx
+|   |   +---MapView.tsx
+|   |   +---PriceChart.tsx
+|   |   +---PropertyCard.tsx
+|   |   +---PropertyResultCard.tsx
+|   |   +---SearchBar.tsx
+|   |   \---Skeletons.tsx
+|   +---lib
+|   |   +---api.ts
+|   |   +---constants.ts
+|   |   \---hooks.ts
+|   +---public
+|   |   \---.gitkeep
+|   +---services
+|   |   \---api.js
+|   +---store
+|   |   \---usePropertyStore.ts
+|   +---styles
+|   |   \---.gitkeep
+|   +---types
+|   |   \---property.ts
+|   +---.eslintrc.json
+|   +---.gitignore
+|   +---instructions.txt
+|   +---new project.txt
+|   +---next.config.mjs
+|   +---next-env.d.ts
+|   +---package.json
+|   +---package-lock.json
+|   +---postcss.config.mjs
+|   +---tailwind.config.ts
+|   \---tsconfig.json
++---rag_engine
+|   +---config
+|   |   \---settings.py
+|   +---embeddings
+|   |   +---embedder.py
+|   |   \---vector_store.py
+|   +---generation
+|   |   +---llm_client.py
+|   |   \---prompt_templates.py
+|   +---ingestion
+|   |   +---chunker.py
+|   |   +---cleaner.py
+|   |   \---scraper.py
+|   +---pipeline
+|   |   +---rag_pipeline.py
+|   |   \---scheduler.py
+|   +---retrieval
+|   |   +---ranker.py
+|   |   \---retriever.py
+|   +---rag_api.py
+|   \---requirements.txt
++---shared
+|   \---logger.py
++---.gitignore
++---new project.txt
++---project_clean_structure.txt
+\---project_full_structure.txt

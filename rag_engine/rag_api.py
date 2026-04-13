@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 from fastapi import FastAPI
 from pydantic import BaseModel
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+import uvicorn
 
 from rag_engine.pipeline.rag_pipeline import refresh_vector_store, run_rag
 
@@ -29,3 +23,7 @@ def rag_query(req: QueryRequest):
 def refresh_index():
     store = refresh_vector_store(force=True)
     return {"status": "refreshed", "documents": len(store.texts)}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)

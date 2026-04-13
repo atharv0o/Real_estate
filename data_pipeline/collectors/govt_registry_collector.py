@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from shared.logger import get_logger
+from data_pipeline.logging_utils import get_logger
 
 
 logger = get_logger(__name__)

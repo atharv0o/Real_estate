@@ -20,7 +20,7 @@ from data_pipeline.config import PipelineSettings
 from data_pipeline.loaders.db_loader import upsert_records
 from data_pipeline.loaders.vector_loader import load_vectors
 from data_pipeline.processors.geo_encoder import GeoEncoder
-from shared.logger import get_logger
+from data_pipeline.logging_utils import get_logger
 
 ensure_project_root()
 

@@ -14,8 +14,8 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from data_pipeline.config import PipelineSettings
+from data_pipeline.logging_utils import get_logger
 from data_pipeline.processors.geo_encoder import GeoEncoder
-from shared.logger import get_logger
 
 
 logger = get_logger(__name__)

@@ -1,11 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import property
+from app.routes import ai, property, search, verify
 
-from app.routes import search, ai, verify   # ✅ IMPORT ROUTES
-
-app = FastAPI(title="Real Estate Backend 🚀")
+app = FastAPI(title="Real Estate Backend")
 
 # CORS
 app.add_middleware(
@@ -25,4 +23,4 @@ app.include_router(property.router, prefix="/api")
 
 @app.get("/")
 def root():
-    return {"message": "Backend running successfully 🚀"}
+    return {"message": "Backend running successfully"}

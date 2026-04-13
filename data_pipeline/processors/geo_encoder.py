@@ -4,7 +4,7 @@ import time
 from typing import Any
 
 from data_pipeline.config import PipelineSettings
-from shared.logger import get_logger
+from data_pipeline.logging_utils import get_logger
 
 try:
     from geopy.exc import GeocoderServiceError, GeocoderTimedOut

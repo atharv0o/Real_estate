@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 import os
-from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import psycopg2
 from dotenv import load_dotenv
-from psycopg2.extras import RealDictCursor
-
-from app.core.logging import get_logger
 
 
-logger = get_logger(__name__)
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(SERVICE_ROOT / ".env")
 
@@ -70,55 +65,5 @@ def initialize_database() -> None:
                     );
                     """
                 )
-                cursor.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_land_listings_location
-                    ON land_listings (location);
-                    """
-                )
-                cursor.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS idx_land_listings_coordinates
-                    ON land_listings (latitude, longitude);
-                    """
-                )
-    finally:
-        connection.close()
-
-
-def fetch_all_dicts(query: str, params: tuple[Any, ...] | None = None) -> list[dict[str, Any]]:
-    initialize_database()
-    connection = get_connection()
-    try:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute(query, params)
-            return [dict(row) for row in cursor.fetchall()]
-    finally:
-        connection.close()
-
-
-def fetch_one_dict(query: str, params: tuple[Any, ...] | None = None) -> dict[str, Any] | None:
-    initialize_database()
-    connection = get_connection()
-    try:
-        with connection.cursor(cursor_factory=RealDictCursor) as cursor:
-            cursor.execute(query, params)
-            row = cursor.fetchone()
-            return dict(row) if row else None
-    finally:
-        connection.close()
-
-
-@contextmanager
-def transaction() -> Iterator[Any]:
-    initialize_database()
-    connection = get_connection()
-    try:
-        yield connection
-        connection.commit()
-    except Exception:
-        connection.rollback()
-        logger.exception("Database transaction failed and was rolled back.")
-        raise
     finally:
         connection.close()

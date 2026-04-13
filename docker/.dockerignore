@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+frontend/node_modules
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+venv
+.env
+
+# Data (VERY IMPORTANT)
+*.csv
+*.json
+*.parquet
+*.db
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist
+build
+
+# Large folders (custom)
+data
+datasets
+models
