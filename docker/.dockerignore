@@ -14,7 +14,7 @@ __pycache__
 venv
 .env
 
-# Data (VERY IMPORTANT)
+# Data (VERY IMPORTANT — *.csv only matches context root; data_pipeline/dataset/*.csv is still included)
 *.csv
 *.json
 *.parquet

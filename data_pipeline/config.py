@@ -45,7 +45,7 @@ class PipelineSettings:
             listing_request_timeout=int(os.getenv("LISTING_REQUEST_TIMEOUT", "10")),
             enable_blockchain_hook=_as_bool(os.getenv("ENABLE_BLOCKCHAIN_HOOK"), default=False),
             blockchain_service_url=os.getenv("BLOCKCHAIN_SERVICE_URL", "http://blockchain:8002/verify"),
-            rag_refresh_url=os.getenv("RAG_REFRESH_URL", "http://rag_engine:8000/refresh-index"),
+            rag_refresh_url=os.getenv("RAG_REFRESH_URL", "http://localhost:8001/refresh-index"),
             scheduler_interval_minutes=int(os.getenv("PIPELINE_SCHEDULE_MINUTES", "60")),
             vector_dim=int(os.getenv("VECTOR_DIM", "384")),
             vector_index_path=Path(os.getenv("VECTOR_INDEX_PATH", storage_root / "property_index.faiss")),

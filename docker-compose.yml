@@ -14,7 +14,9 @@ services:
       retries: 20
 
   rag_engine:
-    build: ./rag_engine
+    build:
+      context: .
+      dockerfile: docker/rag.Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/realestate
       POSTGRES_DB: realestate
@@ -28,10 +30,12 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8001:8000"
+      - "8001:8001"
 
   blockchain:
-    build: ./blockchain
+    build:
+      context: .
+      dockerfile: docker/blockchain.Dockerfile
     environment:
       ALGORAND_MNEMONIC: ${ALGORAND_MNEMONIC:-}
       ALGORAND_NODE_URL: ${ALGORAND_NODE_URL:-https://testnet-api.algonode.cloud}
@@ -40,7 +44,9 @@ services:
       - "8002:8002"
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/realestate
       POSTGRES_DB: realestate
@@ -48,9 +54,9 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      RAG_API: http://rag_engine:8000
-      RAG_QUERY_URL: http://rag_engine:8000/rag-query
-      RAG_REFRESH_URL: http://rag_engine:8000/refresh-index
+      RAG_API: http://rag_engine:8001
+      RAG_QUERY_URL: http://rag_engine:8001/rag-query
+      RAG_REFRESH_URL: http://rag_engine:8001/refresh-index
       BLOCKCHAIN_API: http://blockchain:8002
       LOG_LEVEL: INFO
     depends_on:
@@ -64,7 +70,9 @@ services:
       - "8000:8000"
 
   data_pipeline:
-    build: ./data_pipeline
+    build:
+      context: .
+      dockerfile: docker/data_pipeline.Dockerfile
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/realestate
       POSTGRES_DB: realestate
@@ -72,7 +80,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      RAG_REFRESH_URL: http://rag_engine:8000/refresh-index
+      RAG_REFRESH_URL: http://rag_engine:8001/refresh-index
       BLOCKCHAIN_SERVICE_URL: http://blockchain:8002/verify
       LOG_LEVEL: INFO
     depends_on:
@@ -80,7 +88,9 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,24 @@ try:
     import faiss  # type: ignore
 except Exception:  # pragma: no cover
     faiss = None  # type: ignore
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    if hasattr(value, "item") and callable(value.item):
+        try:
+            scalar = value.item()
+        except Exception:
+            return str(value)
+        return _json_safe(scalar)
+    return value
 
 
 class VectorStore:
@@ -101,7 +120,7 @@ class VectorStore:
             "metadata": self.metadata,
             "embeddings": self._embeddings.tolist(),
         }
-        self.metadata_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        self.metadata_path.write_text(json.dumps(_json_safe(payload), indent=2), encoding="utf-8")
 
         if faiss is not None and self.index_path and self.index is not None:
             self.index_path.parent.mkdir(parents=True, exist_ok=True)

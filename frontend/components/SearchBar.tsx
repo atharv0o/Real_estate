@@ -3,12 +3,15 @@
 import { ChangeEvent, FormEvent, useCallback, useState } from "react";
 
 import { MIN_AREA_LENGTH, PIN_CODE_REGEX } from "@/lib/constants";
-import { getApiErrorMessage, resolveLocation } from "@/lib/api";
-import type { Coordinates, LocationQuery } from "@/types/property";
+import { getApiErrorMessage, postSearch, resolveLocation } from "@/lib/api";
+import type { Coordinates, FullSearchPayload, LocationQuery, PropertyFilters } from "@/types/property";
 
 export type SearchBarProps = {
   initialValues?: Partial<LocationQuery>;
   onResolved?: (coords: Coordinates, query: LocationQuery) => void;
+  /** When set with filters, submits POST /api/search (full pipeline) instead of GET /location only. */
+  filters?: PropertyFilters;
+  onFullSearch?: (payload: FullSearchPayload, query: LocationQuery) => void;
   className?: string;
 };
 
@@ -32,7 +35,13 @@ function validate(values: LocationQuery): FieldErrors {
   return errors;
 }
 
-export function SearchBar({ initialValues, onResolved, className = "" }: SearchBarProps) {
+export function SearchBar({
+  initialValues,
+  onResolved,
+  filters,
+  onFullSearch,
+  className = ""
+}: SearchBarProps) {
   const [values, setValues] = useState<LocationQuery>({
     district: initialValues?.district ?? "",
     city: initialValues?.city ?? "",
@@ -70,15 +79,23 @@ export function SearchBar({ initialValues, onResolved, className = "" }: SearchB
       setSubmitting(true);
       setApiError(null);
       try {
-        const coordinates = await resolveLocation(next);
-        onResolved?.(coordinates, next);
+        if (onFullSearch && filters) {
+          const coordinates = await resolveLocation(next);
+          onResolved?.(coordinates, next);
+
+          const payload = await postSearch(next, filters);
+          onFullSearch(payload, next);
+        } else {
+          const coordinates = await resolveLocation(next);
+          onResolved?.(coordinates, next);
+        }
       } catch (error) {
         setApiError(getApiErrorMessage(error));
       } finally {
         setSubmitting(false);
       }
     },
-    [onResolved, values]
+    [onResolved, onFullSearch, filters, values]
   );
 
   const inputClass =
@@ -191,7 +208,7 @@ export function SearchBar({ initialValues, onResolved, className = "" }: SearchB
           disabled={submitting}
           className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-cyan-500 px-8 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-sky-500/25 transition hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-sky-400/50"
         >
-          {submitting ? "Resolving..." : "Search area"}
+          {submitting ? (onFullSearch ? "Searching pipeline…" : "Resolving...") : "Search area"}
         </button>
         <span className="text-xs text-slate-500">
           Results are fetched from the backend using live coordinates.

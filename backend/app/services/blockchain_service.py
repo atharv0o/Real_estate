@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 
 import requests
@@ -9,6 +10,11 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 BLOCKCHAIN_API = os.getenv("BLOCKCHAIN_API", "http://127.0.0.1:8002").rstrip("/")
+
+
+def compute_record_hash(title: str, location: str, price: str | int | float) -> str:
+    payload = f"{title}{location}{price}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def verify_land_record(data: dict, service_url: str | None = None, enabled: bool = True) -> dict:
@@ -30,3 +36,16 @@ def verify_land_record(data: dict, service_url: str | None = None, enabled: bool
 
 def verify_property(data: dict) -> dict:
     return verify_land_record(data)
+
+
+def verify_property_with_hash(title: str, location: str, price: str | int | float) -> dict[str, object]:
+    h = compute_record_hash(title, location, price)
+    payload = {"title": title, "location": location, "price": str(price), "record_hash": h}
+    remote = verify_land_record(payload)
+    verified = True
+    if isinstance(remote, dict):
+        if remote.get("skipped"):
+            verified = True
+        elif "verified" in remote:
+            verified = bool(remote["verified"])
+    return {"verified": verified, "hash": h, "detail": remote}

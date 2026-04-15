@@ -11,7 +11,7 @@ RAG_URL = os.getenv("RAG_QUERY_URL", f"{RAG_API}/rag-query")
 
 def ask_ai(query: str) -> dict:
     try:
-        response = requests.post(RAG_URL, json={"query": query}, timeout=20)
+        response = requests.post(RAG_URL, json={"query": query}, timeout=5)
         response.raise_for_status()
         payload = response.json()
         return payload if isinstance(payload, dict) else {"answer": str(payload)}

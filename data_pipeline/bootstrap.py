@@ -14,6 +14,17 @@ def ensure_project_root() -> Path:
 
 def main() -> None:
     ensure_project_root()
+    import json
+    import os
+
+    if os.getenv("PIPELINE_IMPORT_CSV", "").strip().lower() in {"1", "true", "yes", "on"}:
+        from data_pipeline.import_csv_listings import run_import
+
+        skip_db = os.getenv("PIPELINE_IMPORT_CSV_NO_DB", "").strip().lower() in {"1", "true", "yes", "on"}
+        skip_json = os.getenv("PIPELINE_IMPORT_CSV_NO_JSON", "").strip().lower() in {"1", "true", "yes", "on"}
+        print(json.dumps(run_import(limit=None, json_out=not skip_json, db_load=not skip_db), indent=2))
+        return
+
     from data_pipeline.scheduler import main as scheduler_main
 
     scheduler_main()

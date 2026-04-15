@@ -39,6 +39,8 @@ export type PropertyRecord = {
   blockchain_verified?: boolean;
   blockchain_hash?: string | null;
   blockchain_tx_id?: string | null;
+  verification_hash?: string | null;
+  ai_summary?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -48,6 +50,17 @@ export type AiInsight = {
   price_trends: { label: string; value: number }[];
   average_price: number;
   property_count: number;
+  price_trend?: string;
+  investment_score?: number;
+  avg_price?: number;
+};
+
+export type FullSearchPayload = {
+  coordinates: Coordinates;
+  properties: PropertyRecord[];
+  insights: AiInsight;
+  count: number;
+  store?: { upserted: number; vector_notify_count: number };
 };
 
 export type ApiEnvelope<T> = {

@@ -24,9 +24,12 @@ export function PropertyResultCard({ property }: PropertyResultCardProps) {
           sizes="(max-width:768px) 100vw, 400px"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
-        {property.blockchain_verified && (
-          <div className="absolute right-3 top-3">
-            <BlockchainBadge />
+        {(property.blockchain_verified || property.verification_hash) && (
+          <div className="absolute right-3 top-3 max-w-[min(200px,45%)]">
+            <BlockchainBadge
+              verified={Boolean(property.blockchain_verified)}
+              hash={property.verification_hash ?? property.blockchain_hash}
+            />
           </div>
         )}
       </div>
@@ -47,6 +50,9 @@ export function PropertyResultCard({ property }: PropertyResultCardProps) {
           <span>Area: {property.area_sqft ? `${property.area_sqft} sqft` : "N/A"}</span>
           <span>Source: {property.source ?? "pipeline"}</span>
         </div>
+        {property.ai_summary ? (
+          <p className="line-clamp-2 text-xs text-sky-200/90">{property.ai_summary}</p>
+        ) : null}
         <Link
           href={`/property/${property.external_id ?? property.id}`}
           className="inline-flex text-sm font-medium text-sky-400 hover:text-sky-300"

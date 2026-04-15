@@ -3,6 +3,13 @@ from __future__ import annotations
 from app.db.postgres import fetch_all_dicts, fetch_one_dict
 
 
+def get_coordinates(query: str) -> dict:
+    """Resolve a free-text location query to lat/lng (DB-backed or deterministic fallback)."""
+    from app.services.maps_service import resolve_location
+
+    return resolve_location(query)
+
+
 def get_property_coordinates(property_id: int | None = None, external_id: str | None = None) -> dict | None:
     if property_id is None and external_id is None:
         raise ValueError("property_id or external_id is required")

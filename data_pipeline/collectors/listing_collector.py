@@ -36,25 +36,17 @@ MAP_COORDINATE_PATTERNS = [
 ]
 HEADER_ROTATION = [
     {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        ),
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "en-IN,en;q=0.9",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
     },
     {
-        "User-Agent": (
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
-            "(KHTML, like Gecko) Version/17.4 Safari/605.1.15"
-        ),
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.4 Safari/605.1.15",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "en-US,en;q=0.8",
-    },
-    {
-        "User-Agent": (
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-        ),
-        "Accept-Language": "en-GB,en;q=0.8",
+        "Connection": "keep-alive",
     },
 ]
 
@@ -164,19 +156,27 @@ def collect_listings(settings: PipelineSettings, geo_encoder: GeoEncoder) -> Col
 
 def _build_session() -> requests.Session:
     retry = Retry(
-        total=3,
-        connect=3,
-        read=3,
-        backoff_factor=1.0,
+        total=5,
+        connect=5,
+        read=5,
+        backoff_factor=2,
         status_forcelist=[403, 408, 429, 500, 502, 503, 504],
         allowed_methods=["GET"],
         raise_on_status=False,
     )
-    session = requests.Session()
-    session.mount("http://", HTTPAdapter(max_retries=retry))
-    session.mount("https://", HTTPAdapter(max_retries=retry))
-    return session
 
+    session = requests.Session()
+    adapter = HTTPAdapter(max_retries=retry)
+
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+
+    # simulate real browser cookies behavior
+    session.headers.update({
+        "Connection": "keep-alive",
+    })
+
+    return session
 
 def _page_url(base_url: str, page_number: int) -> str:
     if page_number <= 1:
@@ -185,18 +185,45 @@ def _page_url(base_url: str, page_number: int) -> str:
     return f"{base_url}{separator}page={page_number}"
 
 
+import random
+
 def _fetch_html(session: requests.Session, url: str, settings: PipelineSettings) -> str | None:
-    for attempt, headers in enumerate(HEADER_ROTATION, start=1):
-        request_headers = dict(headers)
-        request_headers["Referer"] = url
+    for attempt in range(1, 6):
+        headers = dict(random.choice(HEADER_ROTATION))
+
+        # smarter referer (important for 99acres)
+        headers["Referer"] = "https://www.google.com/"
+
         try:
-            response = session.get(url, headers=request_headers, timeout=settings.listing_request_timeout)
+            response = session.get(
+                url,
+                headers=headers,
+                timeout=settings.listing_request_timeout,
+            )
+
+            # 🔥 handle 403 specifically
+            if response.status_code == 403:
+                logger.warning("403 blocked for %s (attempt %s)", url, attempt)
+
+                # exponential backoff + jitter
+                time.sleep(random.uniform(3, 6) * attempt)
+                continue
+
             if response.status_code >= 400:
                 raise requests.HTTPError(f"status={response.status_code}", response=response)
+
+            # basic bot-detection fallback
+            if "captcha" in response.text.lower() or "access denied" in response.text.lower():
+                logger.warning("Bot detection triggered for %s", url)
+                time.sleep(random.uniform(5, 10))
+                continue
+
             return response.text
+
         except Exception as exc:
             logger.warning("Fetch failed for %s on attempt %s: %s", url, attempt, exc)
-            time.sleep(1.5 + attempt)
+            time.sleep(random.uniform(2, 5) * attempt)
+
     return None
 
 

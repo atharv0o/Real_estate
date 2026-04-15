@@ -12,6 +12,9 @@ export type PropertyCardProps = {
   imageUrl: string;
   freshnessHours: number;
   blockchainVerified?: boolean;
+  verificationHash?: string | null;
+  aiSummary?: string;
+  locationLine?: string;
   className?: string;
 };
 
@@ -38,6 +41,9 @@ export function PropertyCard({
   imageUrl,
   freshnessHours,
   blockchainVerified = false,
+  verificationHash,
+  aiSummary,
+  locationLine,
   className = ""
 }: PropertyCardProps) {
   return (
@@ -54,9 +60,9 @@ export function PropertyCard({
           priority={false}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
-        {blockchainVerified && (
-          <div className="absolute right-3 top-3">
-            <BlockchainBadge />
+        {(blockchainVerified || verificationHash) && (
+          <div className="absolute right-3 top-3 max-w-[45%]">
+            <BlockchainBadge verified={blockchainVerified} hash={verificationHash} />
           </div>
         )}
       </div>
@@ -66,6 +72,9 @@ export function PropertyCard({
             <h3 className="font-display text-lg font-semibold text-white">
               {areaName}
             </h3>
+            {locationLine ? (
+              <p className="mt-1 text-xs text-slate-400">{locationLine}</p>
+            ) : null}
             <p className="mt-1 text-2xl font-bold tracking-tight text-sky-300">
               ₹{pricePerSqFt.toLocaleString("en-IN")}
               <span className="text-sm font-normal text-slate-400"> / sq ft</span>
@@ -73,6 +82,9 @@ export function PropertyCard({
           </div>
           <TrendPill trend={trend} />
         </div>
+        {aiSummary ? (
+          <p className="text-xs leading-relaxed text-sky-100/80 line-clamp-3">{aiSummary}</p>
+        ) : null}
         <FreshnessScore hours={freshnessHours} />
       </div>
     </article>

@@ -5,6 +5,7 @@ import type {
   AiInsight,
   ApiEnvelope,
   Coordinates,
+  FullSearchPayload,
   LocationQuery,
   PropertyData,
   PropertyFilters,
@@ -12,7 +13,7 @@ import type {
   PropertySearchParams
 } from "@/types/property";
 
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -55,6 +56,42 @@ export async function resolveLocation(query: LocationQuery): Promise<Coordinates
       params: { query: buildLocationQuery(query) }
     })
   );
+}
+
+function normalizeInsights(raw: Record<string, unknown>): AiInsight {
+  const priceTrends = (raw.price_trends as AiInsight["price_trends"]) || [];
+  const avg = Number(raw.average_price ?? raw.avg_price ?? 0);
+  return {
+    summary: String(raw.summary ?? ""),
+    price_trends: priceTrends,
+    average_price: avg,
+    property_count: Number(raw.property_count ?? 0),
+    price_trend: raw.price_trend as AiInsight["price_trend"],
+    investment_score: Number(raw.investment_score ?? 0),
+    avg_price: Number(raw.avg_price ?? avg)
+  };
+}
+
+export async function postSearch(
+  query: LocationQuery,
+  filters: PropertyFilters
+): Promise<FullSearchPayload> {
+  const data = await unwrapResponse(
+    apiClient.post<ApiEnvelope<FullSearchPayload>>("/api/search", {
+      area: query.area,
+      city: query.city,
+      district: query.district,
+      pinCode: query.pinCode,
+      landAreaCode: query.landAreaCode,
+      radius: filters.radius,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice
+    })
+  );
+  return {
+    ...data,
+    insights: normalizeInsights(data.insights as unknown as Record<string, unknown>)
+  };
 }
 
 export async function searchLand(

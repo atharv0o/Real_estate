@@ -11,18 +11,27 @@ type ChartsProps = {
   enabled: boolean;
   locationLabel: string;
   properties: PropertyRecord[];
+  prefetchedInsight?: AiInsight | null;
 };
 
-export function Charts({ enabled, locationLabel, properties }: ChartsProps) {
-  const [insight, setInsight] = useState<AiInsight | null>(null);
+export function Charts({ enabled, locationLabel, properties, prefetchedInsight }: ChartsProps) {
+  const [insight, setInsight] = useState<AiInsight | null>(prefetchedInsight ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (prefetchedInsight) {
+      setInsight(prefetchedInsight);
+      return;
+    }
+  }, [prefetchedInsight]);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadInsights() {
       if (!enabled || !locationLabel || properties.length === 0) return;
+      if (prefetchedInsight) return;
       setLoading(true);
       setError(null);
       try {
@@ -39,7 +48,7 @@ export function Charts({ enabled, locationLabel, properties }: ChartsProps) {
     return () => {
       ignore = true;
     };
-  }, [enabled, locationLabel, properties]);
+  }, [enabled, locationLabel, properties, prefetchedInsight]);
 
   if (!enabled) {
     return null;
@@ -62,8 +71,8 @@ export function Charts({ enabled, locationLabel, properties }: ChartsProps) {
           <p className="rounded-xl border border-white/5 bg-black/20 p-4 text-sm leading-6 text-slate-200">
             {insight.summary}
           </p>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/5 bg-black/20 p-4 sm:col-span-1">
               <p className="text-xs uppercase tracking-wide text-slate-500">Average price</p>
               <p className="mt-2 text-2xl font-semibold text-sky-300">
                 ₹{insight.average_price.toLocaleString("en-IN")}
@@ -72,8 +81,20 @@ export function Charts({ enabled, locationLabel, properties }: ChartsProps) {
                 Based on {insight.property_count} nearby properties
               </p>
             </div>
-            <PriceChart data={insight.price_trends} />
+            <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Price trend</p>
+              <p className="mt-2 text-lg font-semibold capitalize text-violet-300">
+                {insight.price_trend ?? "—"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Investment score</p>
+              <p className="mt-2 text-lg font-semibold text-emerald-300">
+                {insight.investment_score != null ? `${insight.investment_score} / 10` : "—"}
+              </p>
+            </div>
           </div>
+          <PriceChart data={insight.price_trends} />
         </>
       )}
     </section>
