@@ -15,7 +15,7 @@ _PROPERTIES_PATH = _REPO_ROOT / "backend" / "data" / "properties.json"
 def _load_json_properties() -> list[dict]:
     if not _PROPERTIES_PATH.is_file():
         return []
-    with _PROPERTIES_PATH.open(encoding="utf-8") as file:
+    with _PROPERTIES_PATH.open(encoding="utf-8-sig") as file:
         data = json.load(file)
     return [item for item in data if isinstance(item, dict)] if isinstance(data, list) else []
 

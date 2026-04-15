@@ -237,10 +237,10 @@ export function GoogleMapView({
     () =>
       results.filter(
         (result) =>
-          typeof result.lat === "number" &&
-          Number.isFinite(result.lat) &&
-          typeof result.lng === "number" &&
-          Number.isFinite(result.lng)
+          typeof (result.latitude ?? result.lat) === "number" &&
+          Number.isFinite(Number(result.latitude ?? result.lat)) &&
+          typeof (result.longitude ?? result.lng) === "number" &&
+          Number.isFinite(Number(result.longitude ?? result.lng))
       ),
     [results]
   );
@@ -331,9 +331,11 @@ export function GoogleMapView({
       markersRef.current.push(centerMarker);
 
       mappableResults.slice(0, 40).forEach((property) => {
+        const propertyLat = Number(property.latitude ?? property.lat);
+        const propertyLng = Number(property.longitude ?? property.lng);
         const marker = new api.maps.Marker({
           map: mapRef.current,
-          position: { lat: Number(property.lat), lng: Number(property.lng) },
+          position: { lat: propertyLat, lng: propertyLng },
           title: property.title
         });
 
@@ -351,7 +353,7 @@ export function GoogleMapView({
         });
 
         markersRef.current.push(marker);
-        bounds.extend({ lat: Number(property.lat), lng: Number(property.lng) });
+        bounds.extend({ lat: propertyLat, lng: propertyLng });
       });
 
       mapRef.current.fitBounds(bounds, 80);

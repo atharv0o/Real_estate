@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -9,9 +9,19 @@ type MapViewProps = {
   coordinates: Coordinates | null;
   filters: PropertyFilters;
   onResultsChange?: (results: PropertyRecord[]) => void;
-  /** When set (including []), skips network search and uses these listings for markers. */
   externalResults?: PropertyRecord[] | null;
 };
+
+function hasCoordinates(record: PropertyRecord): boolean {
+  const lat = record.latitude ?? record.lat;
+  const lng = record.longitude ?? record.lng;
+  return (
+    typeof lat === "number" &&
+    Number.isFinite(lat) &&
+    typeof lng === "number" &&
+    Number.isFinite(lng)
+  );
+}
 
 export function MapView({ coordinates, filters, onResultsChange, externalResults }: MapViewProps) {
   const [results, setResults] = useState<PropertyRecord[]>([]);
@@ -22,10 +32,12 @@ export function MapView({ coordinates, filters, onResultsChange, externalResults
 
   useEffect(() => {
     if (useExternal) {
-      setResults(externalResults);
+      const nextResults = externalResults.filter(hasCoordinates);
+      console.debug("MapView using external results", nextResults.length);
+      setResults(nextResults);
       setError(null);
       setLoading(false);
-      onResultsChange?.(externalResults);
+      onResultsChange?.(nextResults);
       return;
     }
 
@@ -41,7 +53,8 @@ export function MapView({ coordinates, filters, onResultsChange, externalResults
       setLoading(true);
       setError(null);
       try {
-        const nextResults = await searchLand(coordinates, filters);
+        const nextResults = (await searchLand(coordinates, filters)).filter(hasCoordinates);
+        console.debug("MapView loaded search results", nextResults.length, coordinates);
         if (!ignore) {
           setResults(nextResults);
           onResultsChange?.(nextResults);
@@ -69,19 +82,15 @@ export function MapView({ coordinates, filters, onResultsChange, externalResults
   const markers = useMemo(() => {
     if (!coordinates || results.length === 0) return [];
     const maxShow = 24;
-    const slice = results.slice(0, maxShow);
-    const dlat = slice.map((r) => Number(r.lat) - coordinates.lat);
-    const dlng = slice.map((r) => Number(r.lng) - coordinates.lng);
-    const maxD = Math.max(
-      1e-6,
-      ...dlat.map((a) => Math.abs(a)),
-      ...dlng.map((a) => Math.abs(a))
-    );
+    const slice = results.slice(0, maxShow).filter(hasCoordinates);
+    const dlat = slice.map((r) => Number(r.latitude ?? r.lat) - coordinates.lat);
+    const dlng = slice.map((r) => Number(r.longitude ?? r.lng) - coordinates.lng);
+    const maxD = Math.max(1e-6, ...dlat.map((a) => Math.abs(a)), ...dlng.map((a) => Math.abs(a)));
     const scale = 38 / maxD;
     return slice.map((r, i) => ({
       id: `${r.id}-${i}`,
-      leftPct: 50 + (Number(r.lng) - coordinates.lng) * scale,
-      topPct: 50 - (Number(r.lat) - coordinates.lat) * scale,
+      leftPct: 50 + (Number(r.longitude ?? r.lng) - coordinates.lng) * scale,
+      topPct: 50 - (Number(r.latitude ?? r.lat) - coordinates.lat) * scale,
       title: r.title
     }));
   }, [coordinates, results]);
@@ -139,29 +148,23 @@ export function MapView({ coordinates, filters, onResultsChange, externalResults
       <div className="border-t border-white/10 bg-slate-950/80 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-white">
-              {coordinates?.label ?? "No location selected"}
-            </p>
+            <p className="text-sm font-medium text-white">{coordinates?.label ?? "No location selected"}</p>
             <p className="text-xs text-sky-300/90">
-              {coordinates
-                ? `${coordinates.lat.toFixed(6)}, ${coordinates.lng.toFixed(6)}`
-                : "Waiting for coordinates"}
+              {coordinates ? `${coordinates.lat.toFixed(6)}, ${coordinates.lng.toFixed(6)}` : "Waiting for coordinates"}
             </p>
           </div>
           <p className="text-xs text-slate-400">Radius: {filters.radius} km</p>
         </div>
 
         <div className="mt-3 rounded-xl border border-white/5 bg-black/20 p-3 text-sm text-slate-300">
-          {loading && <p>Loading nearby properties…</p>}
+          {loading && <p>Loading nearby properties...</p>}
           {error && <p className="text-rose-400">{error}</p>}
-          {!loading && !error && coordinates && results.length === 0 && (
-            <p>No properties found for this search.</p>
-          )}
+          {!loading && !error && coordinates && results.length === 0 && <p>No properties found for this search.</p>}
           {!loading && results.length > 0 && (
             <ul className="space-y-1">
               {results.slice(0, 4).map((result) => (
                 <li key={result.id} className="truncate">
-                  {result.title} • {result.location}
+                  {result.title} - {result.location}
                 </li>
               ))}
             </ul>

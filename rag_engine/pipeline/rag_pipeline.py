@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -21,11 +22,12 @@ INDEX_PATH = Path(os.getenv("VECTOR_INDEX_PATH", PROJECT_ROOT / "rag_engine" / "
 METADATA_PATH = Path(os.getenv("VECTOR_METADATA_PATH", PROJECT_ROOT / "rag_engine" / "storage" / "property_documents.json"))
 VECTOR_DIM = int(os.getenv("VECTOR_DIM", "384"))
 DEFAULT_DOCS = [
-    "Land prices in Pune micro-markets vary by road connectivity and title clarity.",
+    "Land prices vary by micro-market connectivity, demand, and title clarity.",
     "Registry verified land parcels are typically more trustworthy for due diligence workflows.",
     "Plots near transport corridors often carry higher redevelopment potential.",
 ]
 
+logger = logging.getLogger(__name__)
 _vector_store: VectorStore | None = None
 _last_loaded_signature: tuple[float, float] | None = None
 
@@ -139,8 +141,25 @@ def refresh_vector_store(force: bool = False) -> VectorStore:
     return _vector_store
 
 
-def run_rag(query):
+def run_rag(query, location: str | None = None, property_context: dict[str, Any] | str | None = None):
     vector_store = refresh_vector_store()
-    docs = retrieve(query, vector_store)
-    prompt = build_prompt(query, docs)
+    logger.debug(
+        "Running RAG query: location=%s has_property_context=%s",
+        location,
+        bool(property_context),
+    )
+    docs = retrieve(query, vector_store, user_location=location)
+    property_context_text = None
+    if isinstance(property_context, dict):
+        property_context_text = "\n".join(
+            f"{key}: {value}" for key, value in property_context.items() if value not in (None, "")
+        )
+    elif isinstance(property_context, str) and property_context.strip():
+        property_context_text = property_context.strip()
+
+    context_docs = list(docs)
+    if property_context_text:
+        context_docs = [property_context_text, *context_docs]
+
+    prompt = build_prompt(query, context_docs, location=location, property_context=property_context_text)
     return generate_response(prompt)

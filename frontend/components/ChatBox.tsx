@@ -1,26 +1,65 @@
-"use client";
+﻿"use client";
 
-import { FormEvent, useCallback, useRef, useState } from "react";
+import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
+
+import { queryRag } from "@/lib/api";
+import { usePropertyStore } from "@/store/usePropertyStore";
 
 type Message = { id: string; role: "user" | "assistant"; text: string };
 
-/**
- * Lightweight AI-style chat shell — wire to your RAG endpoint later.
- */
-export function ChatBox() {
+type ChatContext = {
+  propertyId?: string;
+  location?: string;
+  propertyDescription?: string;
+  propertyTitle?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+};
+
+type ChatBoxProps = {
+  context?: ChatContext | null;
+};
+
+export function ChatBox({ context }: ChatBoxProps) {
+  const activePropertyContext = usePropertyStore((s) => s.activePropertyContext);
+  const searchParams = usePropertyStore((s) => s.searchParams);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      text: "Ask about this area — e.g. average price trends, schools nearby, or investment outlook."
+      text: "Ask about this area, or ask property-specific questions when a listing is selected."
     }
   ]);
   const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const resolvedContext = useMemo(() => {
+    if (context) {
+      return context;
+    }
+
+    if (activePropertyContext) {
+      return {
+        propertyId: activePropertyContext.propertyId,
+        location: activePropertyContext.location,
+        propertyDescription: activePropertyContext.description,
+        propertyTitle: activePropertyContext.title,
+        latitude: activePropertyContext.latitude,
+        longitude: activePropertyContext.longitude
+      };
+    }
+
+    const searchLocation = [searchParams?.area, searchParams?.city, searchParams?.district]
+      .filter(Boolean)
+      .join(", ");
+
+    return searchLocation ? { location: searchLocation } : null;
+  }, [activePropertyContext, context, searchParams?.area, searchParams?.city, searchParams?.district]);
+
   const pushAssistant = useCallback((text: string) => {
-    setMessages((m) => [
-      ...m,
+    setMessages((current) => [
+      ...current,
       { id: crypto.randomUUID(), role: "assistant", text }
     ]);
   }, []);
@@ -28,32 +67,43 @@ export function ChatBox() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed) return;
+    if (!trimmed || loading) return;
 
-    setMessages((m) => [
-      ...m,
+    setMessages((current) => [
+      ...current,
       { id: crypto.randomUUID(), role: "user", text: trimmed }
     ]);
     setInput("");
+    setLoading(true);
 
-    // Placeholder “AI” reply — replace with streaming API
-    window.setTimeout(() => {
-      pushAssistant(
-        "This is a demo reply. Connect your RAG backend to answer with live property and document context."
-      );
-    }, 400);
+    void queryRag(trimmed, {
+      property_id: resolvedContext?.propertyId,
+      location: resolvedContext?.location,
+      property_description: resolvedContext?.propertyDescription,
+      property_title: resolvedContext?.propertyTitle,
+      latitude: resolvedContext?.latitude ?? null,
+      longitude: resolvedContext?.longitude ?? null
+    })
+      .then((response) => {
+        pushAssistant(response.answer || "No answer returned from the RAG service.");
+      })
+      .catch((error: unknown) => {
+        pushAssistant(error instanceof Error ? error.message : "RAG request failed.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
     <div className="flex h-full min-h-[320px] flex-col rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-xl">
       <div className="border-b border-white/10 px-4 py-3">
         <p className="text-sm font-semibold text-white">Area assistant</p>
-        <p className="text-xs text-slate-500">Demo UI — no backend attached</p>
+        <p className="text-xs text-slate-500">
+          {resolvedContext?.location ? `Context: ${resolvedContext.location}` : "No location context selected"}
+        </p>
       </div>
-      <div
-        ref={listRef}
-        className="flex-1 space-y-3 overflow-y-auto px-4 py-4 text-sm"
-      >
+      <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 text-sm">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -67,10 +117,7 @@ export function ChatBox() {
           </div>
         ))}
       </div>
-      <form
-        onSubmit={onSubmit}
-        className="border-t border-white/10 p-3"
-      >
+      <form onSubmit={onSubmit} className="border-t border-white/10 p-3">
         <div className="flex gap-2">
           <input
             value={input}
@@ -80,9 +127,10 @@ export function ChatBox() {
           />
           <button
             type="submit"
-            className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400"
+            disabled={loading}
+            className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Send
+            {loading ? "Sending..." : "Send"}
           </button>
         </div>
       </form>

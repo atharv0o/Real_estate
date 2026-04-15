@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 from typing import Any
+
+import requests
 
 from app.core.logging import get_logger
 from app.services.geo_service import get_location_coordinates
@@ -16,7 +19,7 @@ _PROPERTIES_PATH = _REPO_ROOT / "backend" / "data" / "properties.json"
 def _load_json_properties() -> list[dict[str, Any]]:
     if not _PROPERTIES_PATH.is_file():
         return []
-    with _PROPERTIES_PATH.open(encoding="utf-8") as file:
+    with _PROPERTIES_PATH.open(encoding="utf-8-sig") as file:
         data = json.load(file)
     return [item for item in data if isinstance(item, dict)] if isinstance(data, list) else []
 
@@ -73,11 +76,49 @@ def _resolve_from_json(query: str) -> dict[str, Any] | None:
     }
 
 
+def _resolve_with_google_geocoding(query: str) -> dict[str, Any] | None:
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY") or os.getenv("GOOGLE_GEOCODING_API_KEY")
+    if not api_key:
+        return None
+
+    try:
+        response = requests.get(
+            "https://maps.googleapis.com/maps/api/geocode/json",
+            params={"address": query, "key": api_key},
+            timeout=5,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except Exception as exc:
+        logger.warning("Google geocoding lookup failed for %s: %s", query, exc)
+        return None
+
+    results = payload.get("results") or []
+    if payload.get("status") != "OK" or not results:
+        return None
+
+    first = results[0]
+    location = first.get("geometry", {}).get("location", {})
+    lat = location.get("lat")
+    lng = location.get("lng")
+    if lat is None or lng is None:
+        return None
+
+    return {
+        "query": query,
+        "label": first.get("formatted_address") or query,
+        "lat": round(float(lat), 6),
+        "lng": round(float(lng), 6),
+        "source": "google_geocoding",
+    }
+
+
 def resolve_location(query: str) -> dict:
     normalized_query = query.strip()
     if not normalized_query:
         raise ValueError("Location query is required")
 
+    logger.debug("Resolving location=%s", normalized_query)
     stored = None
     try:
         stored = get_location_coordinates(normalized_query)
@@ -101,6 +142,15 @@ def resolve_location(query: str) -> dict:
 
     if dataset_match:
         return dataset_match
+
+    google_match = None
+    try:
+        google_match = _resolve_with_google_geocoding(normalized_query)
+    except Exception as exc:
+        logger.warning("Location lookup via Google geocoding failed, using deterministic fallback: %s", exc)
+
+    if google_match:
+        return google_match
 
     digest = hashlib.sha256(normalized_query.encode("utf-8")).hexdigest()
     lat = round(18.5204 + (int(digest[:8], 16) % 1000) / 10000, 6)

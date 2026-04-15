@@ -35,6 +35,8 @@ export type PropertyRecord = {
   verified_status?: boolean | null;
   lat?: number | null;
   lng?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   distance_km?: number;
   blockchain_verified?: boolean;
   blockchain_hash?: string | null;
@@ -83,5 +85,7 @@ export type PropertyData = {
   imageUrl: string;
   freshnessHours: number;
   blockchainVerified: boolean;
+  lat?: number | null;
+  lng?: number | null;
   priceHistory?: { month: string; value: number }[];
 };

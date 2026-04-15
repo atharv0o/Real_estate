@@ -15,8 +15,15 @@ RAG_QUERY_URL = os.getenv("RAG_QUERY_URL", f"{RAG_API}/rag-query")
 RAG_REFRESH_URL = os.getenv("RAG_REFRESH_URL", f"{RAG_API}/refresh-index")
 
 
-def call_rag(query: str) -> dict:
-    response = requests.post(RAG_QUERY_URL, json={"query": query}, timeout=5)
+def call_rag(query: str, *, location: str | None = None, property_context: dict[str, Any] | None = None) -> dict:
+    payload: dict[str, Any] = {"query": query}
+    if location:
+        payload["location"] = location
+    if property_context:
+        payload["property_context"] = property_context
+
+    logger.debug("Calling RAG API with location=%s has_property_context=%s", location, bool(property_context))
+    response = requests.post(RAG_QUERY_URL, json=payload, timeout=5)
     response.raise_for_status()
     return response.json()
 
@@ -27,7 +34,7 @@ def refresh_rag_index() -> dict:
     return response.json()
 
 
-def get_property_insights(properties: list[dict[str, Any]]) -> dict[str, Any]:
+def get_property_insights(properties: list[dict[str, Any]], location_label: str = "") -> dict[str, Any]:
     if not properties:
         return {
             "avg_price": 0,
@@ -69,14 +76,21 @@ def get_property_insights(properties: list[dict[str, Any]]) -> dict[str, Any]:
     ]
 
     summary = (
-        f"Sample of {len(properties)} listings: average ask ₹{avg_price:,}. "
+        f"Sample of {len(properties)} listings: average ask Rs. {avg_price:,}. "
         f"Trend appears {price_trend} within this slice. Investment score {investment_score}/10."
     )
 
     try:
         rag_payload = call_rag(
             f"Summarize real-estate investment outlook for this micro-market in 2 sentences. "
-            f"Average price {avg_price}, {len(properties)} comps, trend {price_trend}."
+            f"Average price {avg_price}, {len(properties)} comps, trend {price_trend}.",
+            location=location_label or None,
+            property_context={
+                "location": location_label,
+                "property_count": len(properties),
+                "average_price": avg_price,
+                "price_trend": price_trend,
+            },
         )
         ans = rag_payload.get("answer")
         if isinstance(ans, str) and ans.strip():

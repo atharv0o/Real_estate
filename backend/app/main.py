@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import ai, property, search, verify
+from app.routes import ai, property, rag_query, search, verify
 
 app = FastAPI(title="Real Estate Backend")
 
@@ -19,6 +19,7 @@ app.include_router(search.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(verify.router, prefix="/api")
 app.include_router(property.router, prefix="/api")
+app.include_router(rag_query.router)
 
 
 @app.get("/")

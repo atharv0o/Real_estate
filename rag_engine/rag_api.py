@@ -11,11 +11,13 @@ app = FastAPI()
 
 class QueryRequest(BaseModel):
     query: str
+    location: str | None = None
+    property_context: dict | str | None = None
 
 
 @app.post("/rag-query")
 def rag_query(req: QueryRequest):
-    result = run_rag(req.query)
+    result = run_rag(req.query, location=req.location, property_context=req.property_context)
     return {"answer": result}
 
 

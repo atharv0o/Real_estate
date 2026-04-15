@@ -42,7 +42,7 @@ def load_properties_from_json(path: Path | None = None) -> list[dict[str, Any]]:
     if _json_cache is not None and _json_mtime == mtime:
         return _json_cache
 
-    with target.open(encoding="utf-8") as f:
+    with target.open(encoding="utf-8-sig") as f:
         data = json.load(f)
     if not isinstance(data, list):
         return []

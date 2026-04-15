@@ -117,6 +117,25 @@ export async function fetchPropertyById(propertyId: string): Promise<PropertyRec
   );
 }
 
+export async function queryRag(
+  query: string,
+  context?: {
+    property_id?: string;
+    location?: string;
+    property_description?: string;
+    property_title?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  }
+): Promise<{ answer: string }> {
+  return unwrapResponse(
+    apiClient.post<ApiEnvelope<{ answer: string }>>("/rag/query", {
+      query,
+      ...context
+    })
+  );
+}
+
 export async function fetchAiInsights(
   locationLabel: string,
   properties: PropertyRecord[]
@@ -150,6 +169,8 @@ export function getMockPropertyData(params: PropertySearchParams): PropertyData 
     imageUrl: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80",
     freshnessHours: 6,
     blockchainVerified: true,
+    lat: null,
+    lng: null,
     priceHistory: [
       { month: "Jan", value: 7800 },
       { month: "Feb", value: 7950 },
@@ -181,6 +202,8 @@ export async function fetchPropertyData(params: PropertySearchParams): Promise<P
     imageUrl: "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80",
     freshnessHours: 1,
     blockchainVerified: Boolean(first.blockchain_verified),
+    lat: first.lat ?? null,
+    lng: first.lng ?? null,
     priceHistory: properties.slice(0, 6).map((property, index) => ({
       month: `P${index + 1}`,
       value: Number(property.price_numeric ?? 0)
