@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 
+import { Navbar } from "@/components/Navbar";
+import { SmartGuide } from "@/components/AI/SmartGuide";
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 import "./globals.css";
 
 const inter = Inter({
@@ -16,9 +20,9 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "RealestateRag — Area intelligence",
+  title: "RealEstateAI - Property intelligence",
   description:
-    "Search localities, explore maps, and fetch property intelligence powered by RAG."
+    "A premium AI marketplace for property search, investment signals, and verified real estate intelligence."
 };
 
 export default function RootLayout({
@@ -27,27 +31,30 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${outfit.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-screen font-sans antialiased">
-        <header className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-md">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-            <a href="/" className="font-display text-lg font-bold tracking-tight text-white">
-              Realestate<span className="text-sky-400">Rag</span>
-            </a>
-            <nav className="flex gap-6 text-sm text-slate-400">
-              <a href="/" className="hover:text-white">
-                Home
-              </a>
-              <a href="/search" className="hover:text-white">
-                Search
-              </a>
-            </nav>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div
+            aria-hidden="true"
+            className="mesh-gradient pointer-events-none fixed inset-0 z-0"
+          >
+            <div className="pointer-events-none absolute inset-0 bg-grid" />
           </div>
-        </header>
-        <main className="relative min-h-[calc(100vh-4rem)]">{children}</main>
-        <footer className="border-t border-white/5 py-8 text-center text-xs text-slate-600">
-          RealestateRag · Frontend demo · No backend included
-        </footer>
+          <Navbar />
+          <main className="relative z-10 mx-auto min-h-[calc(100vh-5rem)] w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+            {children}
+          </main>
+          <SmartGuide />
+        </ThemeProvider>
       </body>
     </html>
   );
