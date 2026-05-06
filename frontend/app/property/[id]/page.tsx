@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ChatBox } from "@/components/ChatBox";
+import { PropertyBackButton } from "./PropertyBackButton";
 import { PropertyDetailLiveClient } from "./PropertyDetailLiveClient";
 
 type PageProps = { params: Promise<{ id: string }> };
@@ -16,12 +16,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
-      <Link
-        href="/"
-        className="mb-8 inline-block text-sm font-medium text-sky-400 hover:text-sky-300"
-      >
-        ← Back to search
-      </Link>
+      <PropertyBackButton />
 
       <div className="grid gap-10 lg:grid-cols-[1fr_360px]">
         <div>

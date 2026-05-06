@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Activity,
@@ -25,7 +26,9 @@ import {
 } from "recharts";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { fetchAnalyticsDashboard, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import type { AnalyticsDashboard } from "@/types/property";
 
 const hotspots = [
   {
@@ -273,6 +276,32 @@ function TerminalBriefing() {
 }
 
 export default function AnalyticsPage() {
+  const [dashboard, setDashboard] = useState<AnalyticsDashboard | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+    fetchAnalyticsDashboard()
+      .then((payload) => {
+        if (!ignore) setDashboard(payload);
+      })
+      .catch((error) => {
+        if (!ignore) setDashboardError(getApiErrorMessage(error));
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const liveAlphaData = useMemo(() => {
+    const zones = dashboard?.growth_prediction?.slice(0, 6) ?? [];
+    if (zones.length === 0) return alphaData;
+    return zones.map((zone) => ({
+      month: zone.location.slice(0, 8),
+      value: Math.round(zone.growth_prediction * 10)
+    }));
+  }, [dashboard]);
+
   return (
     <div className="space-y-6 pb-8 text-slate-100">
       <section className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
@@ -295,6 +324,40 @@ export default function AnalyticsPage() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_370px]">
         <section className="space-y-6">
+          <Card className="border-white/10 bg-slate-950/80 text-white shadow-none backdrop-blur-xl">
+            <CardContent className="p-5">
+              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                <div>
+                  <p className="text-sm text-slate-400">Live backend analytics</p>
+                  <h2 className="mt-1 text-xl font-semibold">
+                    {dashboard?.summary.property_count ?? 0} listings analyzed
+                  </h2>
+                  {dashboardError && <p className="mt-2 text-sm text-rose-300">{dashboardError}</p>}
+                </div>
+                <div className="grid gap-3 text-sm sm:grid-cols-3">
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                    <p className="text-xs text-slate-500">Average price</p>
+                    <p className="mt-1 font-semibold text-sky-300">
+                      Rs. {Number(dashboard?.summary.average_price ?? 0).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                    <p className="text-xs text-slate-500">Hotspots</p>
+                    <p className="mt-1 font-semibold text-emerald-300">
+                      {dashboard?.investment_hotspots.length ?? 0}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                    <p className="text-xs text-slate-500">Demand zones</p>
+                    <p className="mt-1 font-semibold text-violet-300">
+                      {dashboard?.demand_zones.length ?? 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="overflow-hidden border-emerald-500/15 bg-slate-950/80 text-white shadow-[0_0_90px_rgba(15,23,42,0.55)] backdrop-blur-xl">
             <CardContent className="p-0">
               <div className="flex flex-col justify-between gap-4 border-b border-white/10 p-5 md:flex-row md:items-center">
@@ -345,7 +408,7 @@ export default function AnalyticsPage() {
             <BentoCard title="Area Alpha" value="+18%" icon={TrendingUp}>
               <div className="h-24">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={alphaData}>
+                  <AreaChart data={liveAlphaData}>
                     <defs>
                       <linearGradient id="alpha-fill" x1="0" x2="0" y1="0" y2="1">
                         <stop offset="0%" stopColor="#10b981" stopOpacity={0.36} />
@@ -450,6 +513,28 @@ export default function AnalyticsPage() {
                   Intelligence Agent
                 </div>
                 <TerminalBriefing />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-white/10 bg-slate-950/80 text-white shadow-none backdrop-blur-xl">
+            <CardContent className="p-5">
+              <p className="text-sm text-slate-400">Backend investment hotspots</p>
+              <div className="mt-4 space-y-3">
+                {(dashboard?.investment_hotspots ?? []).slice(0, 5).map((zone) => (
+                  <div key={zone.location} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-white">{zone.location}</p>
+                      <StatusBadge tone={zone.demand_score >= 70 ? "emerald" : "blue"} label={`${zone.demand_score}/100 demand`} />
+                    </div>
+                    <p className="mt-2 text-sm text-slate-400">
+                      Growth prediction {zone.growth_prediction}% | Avg Rs. {Math.round(zone.average_price).toLocaleString("en-IN")}
+                    </p>
+                  </div>
+                ))}
+                {!dashboard?.investment_hotspots?.length && (
+                  <p className="text-sm text-slate-500">Waiting for backend analytics data.</p>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -5,9 +5,15 @@ import { useEffect, useState } from "react";
 
 import { BlockchainBadge } from "@/components/BlockchainBadge";
 import { GoogleMapView } from "@/components/GoogleMapView";
-import { fetchPropertyById, getApiErrorMessage } from "@/lib/api";
+import {
+  fetchInvestmentAdvisor,
+  fetchLegalAdvice,
+  fetchNegotiationAdvice,
+  fetchPropertyById,
+  getApiErrorMessage
+} from "@/lib/api";
 import { usePropertyStore } from "@/store/usePropertyStore";
-import type { PropertyRecord } from "@/types/property";
+import type { InvestmentAdvisor, LegalAdvice, NegotiationAdvice, PropertyRecord } from "@/types/property";
 
 type Props = {
   id: string;
@@ -17,8 +23,13 @@ const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1560518883-ce09059eeff
 
 export function PropertyDetailLiveClient({ id }: Props) {
   const [property, setProperty] = useState<PropertyRecord | null>(null);
+  const [advisor, setAdvisor] = useState<InvestmentAdvisor | null>(null);
+  const [negotiation, setNegotiation] = useState<NegotiationAdvice | null>(null);
+  const [legal, setLegal] = useState<LegalAdvice | null>(null);
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
   const setPropertyContextFromRecord = usePropertyStore((s) => s.setPropertyContextFromRecord);
   const clearPropertyContext = usePropertyStore((s) => s.setActivePropertyContext);
 
@@ -33,6 +44,31 @@ export function PropertyDetailLiveClient({ id }: Props) {
         if (!ignore) {
           setProperty(record);
           setPropertyContextFromRecord(record);
+          setAiLoading(true);
+          setAiError(null);
+          Promise.allSettled([
+            fetchInvestmentAdvisor(record),
+            fetchNegotiationAdvice(record),
+            fetchLegalAdvice(record)
+          ])
+            .then((results) => {
+              if (ignore) return;
+              const [advisorResult, negotiationResult, legalResult] = results;
+              if (advisorResult.status === "fulfilled") setAdvisor(advisorResult.value);
+              if (negotiationResult.status === "fulfilled") setNegotiation(negotiationResult.value);
+              if (legalResult.status === "fulfilled") setLegal(legalResult.value);
+              const failures = results.filter((result) => result.status === "rejected") as PromiseRejectedResult[];
+              if (failures.length > 0) {
+                setAiError(
+                  failures
+                    .map((failure) => getApiErrorMessage(failure.reason))
+                    .join(" | ")
+                );
+              }
+            })
+            .finally(() => {
+              if (!ignore) setAiLoading(false);
+            });
         }
       } catch (err) {
         if (!ignore) {
@@ -117,6 +153,73 @@ export function PropertyDetailLiveClient({ id }: Props) {
       <div className="mt-8 rounded-2xl border border-white/10 bg-slate-900/30 p-5">
         <p className="text-xs uppercase tracking-wide text-slate-500">Description</p>
         <p className="mt-2 text-sm leading-6 text-slate-300">{property.description ?? "No description available."}</p>
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-white/10 bg-slate-900/30 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">AI property intelligence</p>
+            <h2 className="mt-1 text-lg font-semibold text-white">Investment, trust, negotiation, and legal signals</h2>
+          </div>
+          {aiLoading && <span className="text-sm text-sky-300">Analyzing...</span>}
+        </div>
+        {aiError && <p className="mt-3 text-sm text-rose-300">{aiError}</p>}
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Trust score</p>
+            <p className="mt-2 text-2xl font-semibold text-emerald-300">
+              {advisor?.trust_score.score ?? property.trust_score ?? "--"}/100
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              {advisor?.trust_score.label ?? property.trust_label ?? "Awaiting trust score"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">ROI prediction</p>
+            <p className="mt-2 text-2xl font-semibold text-sky-300">
+              {advisor ? `${advisor.roi_prediction}%` : "--"}
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              Rental yield {advisor ? `${advisor.rental_yield}%` : "--"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Suggested offer</p>
+            <p className="mt-2 text-2xl font-semibold text-violet-300">
+              {negotiation?.suggested_offer_price
+                ? `Rs. ${negotiation.suggested_offer_price.toLocaleString("en-IN")}`
+                : "--"}
+            </p>
+            <p className="mt-1 text-sm text-slate-400">
+              Ask Rs. {Number(negotiation?.asking_price ?? property.price_numeric ?? 0).toLocaleString("en-IN")}
+            </p>
+          </div>
+        </div>
+
+        {advisor && (
+          <p className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-sm leading-6 text-slate-300">
+            {advisor.rationale}
+          </p>
+        )}
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Negotiation strategy</p>
+            <ul className="mt-3 space-y-2 text-sm text-slate-300">
+              {(negotiation?.negotiation_strategy ?? ["Awaiting negotiation analysis."]).slice(0, 4).map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-black/20 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Legal checklist</p>
+            <p className="mt-2 text-sm text-slate-300">Risk: {legal?.risk_level ?? "--"}</p>
+            <p className="mt-3 text-sm text-slate-400">
+              Missing: {legal?.missing_documents.length ? legal.missing_documents.join(", ") : "No missing documents detected"}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="mt-10 space-y-3">

@@ -1,10 +1,16 @@
+import { Suspense } from "react";
+
 import { HomeClient } from "./HomeClient";
 
 /**
  * Hero landing: glassmorphism search form → navigates to /search with query params.
  */
 export default function HomePage() {
-  return <HomeClient />;
+  return (
+    <Suspense fallback={null}>
+      <HomeClient />
+    </Suspense>
+  );
 }
 /*
   return (

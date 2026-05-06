@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BadgeCheck, MapPin, SlidersHorizontal, TrendingUp } from "lucide-react";
 
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { fetchRecommendations, getApiErrorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type Property = {
@@ -147,14 +148,47 @@ function PropertyCard({ property }: { property: Property }) {
 }
 
 export default function MarketplacePage() {
+  const [liveProperties, setLiveProperties] = useState<Property[]>([]);
+  const [liveError, setLiveError] = useState<string | null>(null);
   const [priceRange, setPriceRange] = useState([400000, 1400000]);
   const [selectedLocations, setSelectedLocations] = useState<string[]>(locations);
   const [minTrustScore, setMinTrustScore] = useState([70]);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("price");
+  const catalog = liveProperties.length > 0 ? liveProperties : properties;
+  const availableLocations = useMemo(() => Array.from(new Set(catalog.map((property) => property.location))), [catalog]);
+
+  useEffect(() => {
+    let ignore = false;
+    fetchRecommendations({ budget: 1400000, roi_goal: 7, verified_only: false })
+      .then((payload) => {
+        if (ignore) return;
+        const mapped = payload.recommendations.map((item) => ({
+          id: String(item.property.external_id ?? item.property.id),
+          title: item.property.title,
+          price: Number(item.property.price_numeric ?? 0),
+          location: item.property.location,
+          roi: item.investment_advisor.roi_prediction,
+          trustScore: item.investment_advisor.trust_score.score,
+          isVerified: Boolean(item.property.blockchain_verified || item.property.verified_status)
+        })).filter((item) => item.price > 0);
+        setLiveProperties(mapped);
+        if (mapped.length > 0) {
+          setSelectedLocations(Array.from(new Set(mapped.map((item) => item.location))));
+          const prices = mapped.map((item) => item.price);
+          setPriceRange([Math.min(...prices), Math.max(...prices)]);
+        }
+      })
+      .catch((error) => {
+        if (!ignore) setLiveError(getApiErrorMessage(error));
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const visibleProperties = useMemo(() => {
-    return properties
+    return catalog
       .filter((property) => property.price >= priceRange[0] && property.price <= priceRange[1])
       .filter((property) => selectedLocations.includes(property.location))
       .filter((property) => property.trustScore >= minTrustScore[0])
@@ -164,7 +198,7 @@ export default function MarketplacePage() {
         if (sortBy === "roi") return b.roi - a.roi;
         return b.trustScore - a.trustScore;
       });
-  }, [minTrustScore, priceRange, selectedLocations, sortBy, verifiedOnly]);
+  }, [catalog, minTrustScore, priceRange, selectedLocations, sortBy, verifiedOnly]);
 
   function toggleLocation(location: string) {
     setSelectedLocations((current) =>
@@ -237,7 +271,7 @@ export default function MarketplacePage() {
                     <AccordionItem value="location">
                       <AccordionTrigger>Location</AccordionTrigger>
                       <AccordionContent className="space-y-3">
-                        {locations.map((location) => (
+                        {availableLocations.map((location) => (
                           <label
                             key={location}
                             className="flex cursor-pointer items-center gap-3 rounded-md py-1 text-sm"
@@ -286,12 +320,20 @@ export default function MarketplacePage() {
 
           <section className="min-w-0">
             <div className="mb-5 flex items-center justify-between text-sm text-muted-foreground">
-              <span>{visibleProperties.length} properties</span>
+              <span>
+                {visibleProperties.length} properties
+                {liveProperties.length > 0 ? " from smart recommendations" : ""}
+              </span>
               <span className="inline-flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Sorted by {sortBy === "trustScore" ? "Trust Score" : sortBy.toUpperCase()}
               </span>
             </div>
+            {liveError && (
+              <p className="mb-4 rounded-lg border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-200">
+                {liveError}
+              </p>
+            )}
 
             <motion.div layout className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               <AnimatePresence mode="popLayout">
