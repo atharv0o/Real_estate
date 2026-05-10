@@ -1,21 +1,13 @@
 from __future__ import annotations
 
-import json
-import sys
 from pathlib import Path
 from typing import Any
 
 from app.core.logging import get_logger
-from app.services.geo_utils import haversine
 from app.services.property_service import get_filtered_properties
+from app.services.search_cache import get_cached, make_cache_key, set_cached
+from app.services.search_index import load_properties_from_json as load_indexed_properties, search_indexed_properties
 
-_REPO_ROOT = Path(__file__).resolve().parents[3]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
-
-_PROPERTIES_PATH = _REPO_ROOT / "backend" / "data" / "properties.json"
-_json_cache: list[dict[str, Any]] | None = None
-_json_mtime: float | None = None
 logger = get_logger(__name__)
 
 
@@ -33,22 +25,7 @@ def _ensure_pipeline_imports() -> tuple[Any, Any, Any, Any]:
 
 
 def load_properties_from_json(path: Path | None = None) -> list[dict[str, Any]]:
-    global _json_cache, _json_mtime
-    target = path or _PROPERTIES_PATH
-    if not target.is_file():
-        return []
-
-    mtime = target.stat().st_mtime
-    if _json_cache is not None and _json_mtime == mtime:
-        return _json_cache
-
-    with target.open(encoding="utf-8-sig") as f:
-        data = json.load(f)
-    if not isinstance(data, list):
-        return []
-    _json_cache = [x for x in data if isinstance(x, dict)]
-    _json_mtime = mtime
-    return _json_cache
+    return load_indexed_properties(path)
 
 
 def filter_properties_by_location(
@@ -62,52 +39,22 @@ def filter_properties_by_location(
     district: str = "",
     pincode: str = "",
 ) -> list[dict[str, Any]]:
-    area_l = area.strip().lower()
-    city_l = city.strip().lower()
-    district_l = district.strip().lower()
-    pin_l = pincode.strip()
+    if not properties:
+        return []
 
-    out: list[dict[str, Any]] = []
-    for p in properties:
-        try:
-            plat = float(p.get("lat"))
-            plng = float(p.get("lng"))
-        except (TypeError, ValueError):
-            continue
-
-        dist_km = haversine(lat, lng, plat, plng)
-        if dist_km > radius_km:
-            continue
-
-        hay = " ".join(
-            str(p.get(k) or "")
-            for k in (
-                "title",
-                "location",
-                "address",
-                "city",
-                "district",
-                "normalized_location",
-                "search_text",
-                "pincode",
-            )
-        ).lower()
-
-        if area_l and area_l not in hay:
-            continue
-        if city_l and city_l not in hay:
-            continue
-        if district_l and district_l not in hay:
-            continue
-        if pin_l and pin_l and pin_l not in str(p.get("pincode") or "") and pin_l not in hay:
-            continue
-
-        row = dict(p)
-        row["distance_km"] = round(dist_km, 3)
-        out.append(row)
-
-    out.sort(key=lambda x: float(x.get("distance_km") or 9e9))
-    return out
+    indexed = search_indexed_properties(
+        lat,
+        lng,
+        radius_km,
+        area=area,
+        city=city,
+        district=district,
+        pincode=pincode,
+        properties=properties,
+        limit=max(1, len(properties)),
+        offset=0,
+    )
+    return [dict(item) for item in indexed.get("properties", [])]
 
 
 def clean_and_deduplicate(properties: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -153,34 +100,55 @@ def search_properties_from_json(
     city: str = "",
     district: str = "",
     pincode: str = "",
+    limit: int = 25,
+    offset: int = 0,
+    page: int | None = None,
 ) -> dict[str, Any]:
-    catalog = load_properties_from_json()
-    filtered = filter_properties_by_location(
-        catalog,
+    cache_key = make_cache_key(
+        "search:json",
+        {
+            "lat": round(float(lat), 6),
+            "lng": round(float(lng), 6),
+            "radius": round(float(radius), 3),
+            "min_price": min_price,
+            "max_price": max_price,
+            "area": area.strip().lower(),
+            "city": city.strip().lower(),
+            "district": district.strip().lower(),
+            "pincode": pincode.strip().lower(),
+            "limit": int(limit),
+            "offset": int(offset),
+            "page": page,
+        },
+    )
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
+    result = search_indexed_properties(
         lat,
         lng,
         radius,
+        min_price=min_price,
+        max_price=max_price,
         area=area,
         city=city,
         district=district,
         pincode=pincode,
+        limit=limit,
+        offset=offset,
+        page=page,
     )
-
-    priced: list[dict[str, Any]] = []
-    for item in filtered:
-        price_numeric = item.get("price_numeric")
-        try:
-            value = float(price_numeric) if price_numeric is not None else None
-        except (TypeError, ValueError):
-            value = None
-
-        if min_price is not None and value is not None and value < float(min_price):
-            continue
-        if max_price is not None and value is not None and value > float(max_price):
-            continue
-        priced.append(item)
-
-    return {"count": len(priced), "properties": priced}
+    payload = {
+        "count": result.get("count", 0),
+        "total_count": result.get("total_count", 0),
+        "limit": result.get("limit", int(limit)),
+        "offset": result.get("offset", int(offset)),
+        "page": result.get("page", page or 1),
+        "properties": [dict(item) for item in result.get("properties", [])],
+    }
+    set_cached(cache_key, payload, ttl_seconds=300)
+    return payload
 
 
 def get_properties(
@@ -189,7 +157,36 @@ def get_properties(
     radius: float,
     min_price: float | None = None,
     max_price: float | None = None,
+    *,
+    area: str = "",
+    city: str = "",
+    district: str = "",
+    pincode: str = "",
+    limit: int = 25,
+    offset: int = 0,
+    page: int | None = None,
 ) -> dict:
+    cache_key = make_cache_key(
+        "search:properties",
+        {
+            "lat": round(float(lat), 6),
+            "lng": round(float(lng), 6),
+            "radius": round(float(radius), 3),
+            "min_price": min_price,
+            "max_price": max_price,
+            "area": area.strip().lower(),
+            "city": city.strip().lower(),
+            "district": district.strip().lower(),
+            "pincode": pincode.strip().lower(),
+            "limit": int(limit),
+            "offset": int(offset),
+            "page": page,
+        },
+    )
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
     try:
         payload = get_filtered_properties(
             lat=lat,
@@ -197,16 +194,33 @@ def get_properties(
             radius_km=radius,
             min_price=min_price,
             max_price=max_price,
+            limit=limit,
+            offset=offset,
+            area=area,
+            city=city,
+            district=district,
+            pincode=pincode,
+            page=page,
         )
         if payload.get("properties"):
+            set_cached(cache_key, payload, ttl_seconds=300)
             return payload
     except Exception as exc:
         logger.warning("Database-backed property search failed, using JSON fallback: %s", exc)
 
-    return search_properties_from_json(
+    fallback = search_properties_from_json(
         lat=lat,
         lng=lng,
         radius=radius,
         min_price=min_price,
         max_price=max_price,
+        area=area,
+        city=city,
+        district=district,
+        pincode=pincode,
+        limit=limit,
+        offset=offset,
+        page=page,
     )
+    set_cached(cache_key, fallback, ttl_seconds=300)
+    return fallback

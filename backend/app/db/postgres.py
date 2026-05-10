@@ -78,8 +78,40 @@ def initialize_database() -> None:
                 )
                 cursor.execute(
                     """
+                    CREATE INDEX IF NOT EXISTS idx_land_listings_location_lower
+                    ON land_listings (LOWER(location));
+                    """
+                )
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_land_listings_price_numeric
+                    ON land_listings (price_numeric);
+                    """
+                )
+                cursor.execute(
+                    """
                     CREATE INDEX IF NOT EXISTS idx_land_listings_coordinates
                     ON land_listings (latitude, longitude);
+                    """
+                )
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_land_listings_coordinates_partial
+                    ON land_listings (latitude, longitude)
+                    WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
+                    """
+                )
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_land_listings_coordinates_price_partial
+                    ON land_listings (latitude, longitude, price_numeric)
+                    WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND price_numeric IS NOT NULL;
+                    """
+                )
+                cursor.execute(
+                    """
+                    CREATE INDEX IF NOT EXISTS idx_land_listings_updated_at_desc
+                    ON land_listings (updated_at DESC);
                     """
                 )
     finally:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import statistics
 from typing import Any
@@ -7,12 +9,14 @@ from typing import Any
 import requests
 
 from app.core.logging import get_logger
+from app.services.search_cache import get_cached, make_cache_key, set_cached
 
 logger = get_logger(__name__)
 
 RAG_API = os.getenv("RAG_API", "http://localhost:8001").rstrip("/")
 RAG_QUERY_URL = os.getenv("RAG_QUERY_URL", f"{RAG_API}/rag-query")
 RAG_REFRESH_URL = os.getenv("RAG_REFRESH_URL", f"{RAG_API}/refresh-index")
+INSIGHT_CACHE_TTL_SECONDS = float(os.getenv("SEARCH_CACHE_TTL_SECONDS", "300"))
 
 
 def call_rag(query: str, *, location: str | None = None, property_context: dict[str, Any] | None = None) -> dict:
@@ -34,7 +38,25 @@ def refresh_rag_index() -> dict:
     return response.json()
 
 
-def get_property_insights(properties: list[dict[str, Any]], location_label: str = "") -> dict[str, Any]:
+def _property_signature(properties: list[dict[str, Any]], location_label: str) -> str:
+    rows = []
+    for item in properties:
+        rows.append(
+            {
+                "id": item.get("id"),
+                "external_id": item.get("external_id"),
+                "title": item.get("title"),
+                "price_numeric": item.get("price_numeric"),
+                "location": item.get("location"),
+                "lat": item.get("lat"),
+                "lng": item.get("lng"),
+            }
+        )
+    serialized = json.dumps({"location": location_label, "rows": rows}, sort_keys=True, default=str, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _local_property_insights(properties: list[dict[str, Any]], location_label: str = "") -> dict[str, Any]:
     if not properties:
         return {
             "avg_price": 0,
@@ -80,24 +102,6 @@ def get_property_insights(properties: list[dict[str, Any]], location_label: str 
         f"Trend appears {price_trend} within this slice. Investment score {investment_score}/10."
     )
 
-    try:
-        rag_payload = call_rag(
-            f"Summarize real-estate investment outlook for this micro-market in 2 sentences. "
-            f"Average price {avg_price}, {len(properties)} comps, trend {price_trend}.",
-            location=location_label or None,
-            property_context={
-                "location": location_label,
-                "property_count": len(properties),
-                "average_price": avg_price,
-                "price_trend": price_trend,
-            },
-        )
-        ans = rag_payload.get("answer")
-        if isinstance(ans, str) and ans.strip():
-            summary = ans.strip()
-    except Exception as exc:
-        logger.warning("RAG insight enrichment failed, using local summary: %s", exc)
-
     return {
         "avg_price": avg_price,
         "average_price": float(avg_price),
@@ -107,3 +111,39 @@ def get_property_insights(properties: list[dict[str, Any]], location_label: str 
         "price_trends": price_trends,
         "property_count": len(properties),
     }
+
+
+def get_property_insights(
+    properties: list[dict[str, Any]],
+    location_label: str = "",
+    *,
+    enrich_with_rag: bool = True,
+) -> dict[str, Any]:
+    signature = _property_signature(properties, location_label)
+    cache_key = make_cache_key("ai:insights", {"signature": signature})
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
+    payload = _local_property_insights(properties, location_label)
+    if enrich_with_rag and properties:
+        try:
+            rag_payload = call_rag(
+                f"Summarize real-estate investment outlook for this micro-market in 2 sentences. "
+                f"Average price {payload.get('avg_price', 0)}, {len(properties)} comps, trend {payload.get('price_trend', 'flat')}.",
+                location=location_label or None,
+                property_context={
+                    "location": location_label,
+                    "property_count": len(properties),
+                    "average_price": payload.get("avg_price", 0),
+                    "price_trend": payload.get("price_trend", "flat"),
+                },
+            )
+            ans = rag_payload.get("answer")
+            if isinstance(ans, str) and ans.strip():
+                payload["summary"] = ans.strip()
+        except Exception as exc:
+            logger.warning("RAG insight enrichment failed, using local summary: %s", exc)
+
+    set_cached(cache_key, payload, ttl_seconds=INSIGHT_CACHE_TTL_SECONDS)
+    return payload

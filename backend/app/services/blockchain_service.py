@@ -6,6 +6,7 @@ import os
 import requests
 
 from app.core.logging import get_logger
+from app.services.search_cache import get_cached, make_cache_key, set_cached
 
 
 logger = get_logger(__name__)
@@ -40,6 +41,11 @@ def verify_property(data: dict) -> dict:
 
 def verify_property_with_hash(title: str, location: str, price: str | int | float) -> dict[str, object]:
     h = compute_record_hash(title, location, price)
+    cache_key = make_cache_key("blockchain:verification", {"hash": h})
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
     payload = {"title": title, "location": location, "price": str(price), "record_hash": h}
     remote = verify_land_record(payload)
     verified = True
@@ -48,4 +54,11 @@ def verify_property_with_hash(title: str, location: str, price: str | int | floa
             verified = True
         elif "verified" in remote:
             verified = bool(remote["verified"])
-    return {"verified": verified, "hash": h, "detail": remote}
+    result = {"verified": verified, "hash": h, "detail": remote}
+    set_cached(cache_key, result, ttl_seconds=1800)
+    return result
+
+
+def get_cached_verification(hash_value: str) -> dict | None:
+    cache_key = make_cache_key("blockchain:verification", {"hash": hash_value})
+    return get_cached(cache_key)

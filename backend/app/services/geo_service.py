@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.core.logging import get_logger
 from app.db.postgres import fetch_all_dicts, fetch_one_dict
+from app.services.search_cache import get_cached, make_cache_key, set_cached
 
 logger = get_logger(__name__)
 
@@ -43,6 +44,11 @@ def get_property_coordinates(property_id: int | None = None, external_id: str | 
 
 def get_location_coordinates(location: str) -> dict | None:
     logger.debug("Fetching location coordinates for location=%s", location)
+    cache_key = make_cache_key("geo:location", {"location": location.strip().lower()})
+    cached = get_cached(cache_key)
+    if cached is not None:
+        return cached
+
     rows = fetch_all_dicts(
         """
         SELECT latitude AS lat, longitude AS lng
@@ -57,4 +63,6 @@ def get_location_coordinates(location: str) -> dict | None:
         return None
     lat = sum(row["lat"] for row in rows) / len(rows)
     lng = sum(row["lng"] for row in rows) / len(rows)
-    return {"location": location, "lat": round(lat, 6), "lng": round(lng, 6)}
+    payload = {"location": location, "lat": round(lat, 6), "lng": round(lng, 6)}
+    set_cached(cache_key, payload, ttl_seconds=1800)
+    return payload
