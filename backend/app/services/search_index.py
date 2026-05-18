@@ -226,7 +226,14 @@ def _candidate_ids_from_filters(
         candidate_ids = _merge(candidate_ids, index.district_index.get(_normalize_text(district), set()))
     if pincode:
         pin = _normalize_text(pincode)
-        candidate_ids = _merge(candidate_ids, index.pincode_index.get(pin, set()))
+        pin_ids = index.pincode_index.get(pin, set())
+        if pin_ids:
+            if candidate_ids is None:
+                candidate_ids = set(pin_ids)
+            else:
+                narrowed = candidate_ids & pin_ids
+                if narrowed:
+                    candidate_ids = narrowed
 
     tokens = [token for token in _tokenize(_normalize_text(area)) if token]
     if tokens:
@@ -278,7 +285,8 @@ def _matches_text_filters(
         pin_norm = _normalize_text(pincode)
         if pin_norm:
             record_pin = _normalize_text(record.get("pincode") if record else "")
-            if pin_norm not in record_pin and pin_norm not in text:
+            has_location_filter = bool(area or city or district)
+            if not has_location_filter and record_pin and pin_norm not in record_pin:
                 return False
     return True
 

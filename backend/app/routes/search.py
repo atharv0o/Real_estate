@@ -90,7 +90,10 @@ def post_search(body: SearchRequest, background_tasks: BackgroundTasks):
             return success_response(cached)
 
         total_started = time.perf_counter()
-        query = f"{body.area}, {body.city}, {body.district}, {body.pincode}, {body.land_area_code}".strip().strip(",")
+        # Land/area codes are identifiers, not geocoding terms. Including them in
+        # the indexed location lookup can send otherwise valid searches to the
+        # deterministic fallback coordinates when the code tokens collide poorly.
+        query = f"{body.area}, {body.city}, {body.district}".strip().strip(",")
         geocode_started = time.perf_counter()
         coords = get_coordinates(query)
         geocode_ms = (time.perf_counter() - geocode_started) * 1000.0

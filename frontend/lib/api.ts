@@ -45,7 +45,7 @@ async function unwrapResponse<T>(request: Promise<{ data: ApiEnvelope<T> }>): Pr
 }
 
 function buildLocationQuery(query: LocationQuery): string {
-  return [query.area, query.city, query.district, query.pinCode, query.landAreaCode]
+  return [query.area, query.city, query.district]
     .filter(Boolean)
     .join(", ");
 }

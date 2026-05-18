@@ -80,8 +80,10 @@ export function SearchBar({
       setApiError(null);
       try {
         if (onFullSearch && filters) {
-          const coordinates = await resolveLocation(next);
-          onResolved?.(coordinates, next);
+          if (onResolved) {
+            const coordinates = await resolveLocation(next);
+            onResolved(coordinates, next);
+          }
 
           const payload = await postSearch(next, filters);
           onFullSearch(payload, next);
