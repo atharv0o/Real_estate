@@ -8,13 +8,17 @@ export function PropertyBackButton() {
   const returnTo = searchParams.get("returnTo");
 
   const handleClick = () => {
+    if (returnTo) {
+      router.push(decodeURIComponent(returnTo), { scroll: false });
+      return;
+    }
+
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
       return;
     }
 
-    const fallback = returnTo ? decodeURIComponent(returnTo) : "/";
-    router.push(fallback, { scroll: false });
+    router.push("/", { scroll: false });
   };
 
   return (

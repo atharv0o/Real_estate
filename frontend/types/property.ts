@@ -43,6 +43,8 @@ export type PropertyRecord = {
   blockchain_tx_id?: string | null;
   verification_hash?: string | null;
   ai_summary?: string;
+  trust_score?: number;
+  trust_label?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -63,6 +65,59 @@ export type FullSearchPayload = {
   insights: AiInsight;
   count: number;
   store?: { upserted: number; vector_notify_count: number };
+};
+
+export type TrustScore = {
+  score: number;
+  label: string;
+};
+
+export type InvestmentAdvisor = {
+  trust_score: TrustScore;
+  roi_prediction: number;
+  rental_yield: number;
+  rationale: string;
+};
+
+export type NegotiationAdvice = {
+  asking_price: number;
+  suggested_offer_price: number;
+  negotiation_strategy: string[];
+};
+
+export type LegalAdvice = {
+  risk_level: string;
+  missing_documents: string[];
+};
+
+export type Recommendation = {
+  property: PropertyRecord;
+  investment_advisor: InvestmentAdvisor;
+};
+
+export type RecommendationsPayload = {
+  recommendations: Recommendation[];
+};
+
+export type AnalyticsDashboard = {
+  summary: {
+    property_count: number;
+    average_price: number;
+  };
+  investment_hotspots: {
+    location: string;
+    demand_score: number;
+    growth_prediction: number;
+    average_price: number;
+  }[];
+  demand_zones: {
+    location: string;
+    demand_score: number;
+  }[];
+  growth_prediction: {
+    location: string;
+    growth_prediction: number;
+  }[];
 };
 
 export type ApiEnvelope<T> = {

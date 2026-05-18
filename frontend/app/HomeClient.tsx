@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { Charts } from "@/components/Charts";
 import { Filters } from "@/components/Filters";
@@ -21,7 +22,10 @@ const DEFAULT_FILTERS: PropertyFilters = {
 };
 
 export function HomeClient() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const homeSearchState = usePropertyStore((s) => s.homeSearchState);
+  const setSearchParamsInStore = usePropertyStore((s) => s.setSearchParams);
   const setHomeSearchState = usePropertyStore((s) => s.setHomeSearchState);
   const restoreScrollRef = useRef(false);
   const leavingSearchRef = useRef(false);
@@ -36,6 +40,7 @@ export function HomeClient() {
     selectedProperty,
     showInsights
   } = homeSearchState;
+  const currentPath = searchParams.toString() ? `${pathname}?${searchParams.toString()}` : pathname;
 
   useEffect(() => {
     window.history.scrollRestoration = "manual";
@@ -72,8 +77,9 @@ export function HomeClient() {
         showInsights: false,
         scrollY: 0
       });
+      setSearchParamsInStore(query);
     },
-    [setHomeSearchState]
+    [setHomeSearchState, setSearchParamsInStore]
   );
 
   const handleResultsChange = useCallback(
@@ -98,6 +104,12 @@ export function HomeClient() {
     },
     [setHomeSearchState]
   );
+
+  const preserveCurrentStage = useCallback(() => {
+    setHomeSearchState({
+      scrollY: window.scrollY
+    });
+  }, [setHomeSearchState]);
 
   return (
     <div className="relative pb-20 pt-8 md:pt-16">
@@ -179,7 +191,11 @@ export function HomeClient() {
                 onClick={() => preservePropertyNavigationState(property)}
                 className="cursor-pointer text-left"
               >
-                <PropertyResultCard property={property} />
+                <PropertyResultCard
+                  property={property}
+                  returnTo={currentPath}
+                  onNavigate={preserveCurrentStage}
+                />
               </div>
             ))}
           </div>

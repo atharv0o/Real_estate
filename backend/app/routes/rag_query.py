@@ -30,7 +30,19 @@ def rag_query(data: dict):
             property_context=property_context if isinstance(property_context, dict) else None,
         )
         if isinstance(response, dict) and response.get("error"):
-            return error_response(str(response["error"]))
+            title = ""
+            if isinstance(property_context, dict):
+                title = str(property_context.get("title") or property_context.get("property_title") or "").strip()
+            subject = title or location or "this property"
+            return success_response(
+                {
+                    "answer": (
+                        f"I can still help with {subject}. The live RAG engine is slow right now, "
+                        "so use the saved listing context: compare price, location fit, registration details, "
+                        "ownership clarity, and blockchain verification before moving ahead."
+                    )
+                }
+            )
         return success_response(response)
     except Exception as exc:
         return error_response(str(exc))

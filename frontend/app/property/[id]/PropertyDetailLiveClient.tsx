@@ -111,9 +111,12 @@ export function PropertyDetailLiveClient({ id }: Props) {
       <div className="relative mb-8 aspect-[21/9] overflow-hidden rounded-2xl border border-white/10 bg-slate-800">
         <Image src={FALLBACK_IMAGE} alt={property.title} fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
-        {property.blockchain_verified && (
+        {(property.blockchain_verified || property.verification_hash || property.blockchain_hash) && (
           <div className="absolute right-4 top-4">
-            <BlockchainBadge />
+            <BlockchainBadge
+              verified={Boolean(property.blockchain_verified)}
+              hash={property.verification_hash ?? property.blockchain_hash}
+            />
           </div>
         )}
       </div>
@@ -147,6 +150,15 @@ export function PropertyDetailLiveClient({ id }: Props) {
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-500">Source</p>
           <p className="mt-1 text-slate-200">{property.source ?? "pipeline"}</p>
+        </div>
+        <div>
+          <p className="text-xs uppercase tracking-wide text-slate-500">Blockchain verification</p>
+          <div className="mt-1">
+            <BlockchainBadge
+              verified={Boolean(property.blockchain_verified)}
+              hash={property.verification_hash ?? property.blockchain_hash}
+            />
+          </div>
         </div>
       </div>
 

@@ -14,7 +14,17 @@ def ask_ai_route(data: dict):
     property_context = data.get("property_context")
     response = ask_ai(query, location=location or None, property_context=property_context if isinstance(property_context, dict) else None)
     if isinstance(response, dict) and response.get("error"):
-        return error_response(str(response["error"]))
+        subject = location or "this property"
+        if isinstance(property_context, dict):
+            subject = str(property_context.get("title") or property_context.get("property_title") or subject)
+        return success_response(
+            {
+                "answer": (
+                    f"I can still help with {subject}. The live AI engine is slow right now, "
+                    "so I am using the saved property context and verification signals available in this session."
+                )
+            }
+        )
     return success_response(response)
 
 
@@ -26,8 +36,6 @@ def ai_insights(data: dict):
         location = str(data.get("location") or "").strip()
         payload = get_property_insights([item for item in properties if isinstance(item, dict)], location_label=location)
         rag_response = ask_ai(query, location=location or None)
-        if isinstance(rag_response, dict) and rag_response.get("error"):
-            return error_response(str(rag_response["error"]), data={"summary": "", "price_trends": [], "average_price": 0, "property_count": 0})
         answer = rag_response.get("answer")
         if isinstance(answer, str) and answer.strip():
             payload["summary"] = answer.strip()

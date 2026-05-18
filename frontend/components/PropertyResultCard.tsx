@@ -7,12 +7,18 @@ import { BlockchainBadge } from "./BlockchainBadge";
 
 type PropertyResultCardProps = {
   property: PropertyRecord;
+  returnTo?: string;
+  onNavigate?: () => void;
 };
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=80";
 
-export function PropertyResultCard({ property }: PropertyResultCardProps) {
+export function PropertyResultCard({ property, returnTo, onNavigate }: PropertyResultCardProps) {
+  const href = returnTo
+    ? `/property/${property.external_id ?? property.id}?returnTo=${encodeURIComponent(returnTo)}`
+    : `/property/${property.external_id ?? property.id}`;
+
   return (
     <article className="group overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-xl transition hover:border-sky-500/30">
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-800">
@@ -54,7 +60,8 @@ export function PropertyResultCard({ property }: PropertyResultCardProps) {
           <p className="line-clamp-2 text-xs text-sky-200/90">{property.ai_summary}</p>
         ) : null}
         <Link
-          href={`/property/${property.external_id ?? property.id}`}
+          href={href}
+          onClick={onNavigate}
           className="inline-flex text-sm font-medium text-sky-400 hover:text-sky-300"
         >
           View property details

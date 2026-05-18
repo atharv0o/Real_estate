@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useCallback, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useState } from "react";
 
 import { MIN_AREA_LENGTH, PIN_CODE_REGEX } from "@/lib/constants";
 import { getApiErrorMessage, postSearch, resolveLocation } from "@/lib/api";
@@ -52,6 +52,22 @@ export function SearchBar({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setValues({
+      district: initialValues?.district ?? "",
+      city: initialValues?.city ?? "",
+      area: initialValues?.area ?? "",
+      pinCode: initialValues?.pinCode ?? "",
+      landAreaCode: initialValues?.landAreaCode ?? ""
+    });
+  }, [
+    initialValues?.area,
+    initialValues?.city,
+    initialValues?.district,
+    initialValues?.landAreaCode,
+    initialValues?.pinCode
+  ]);
 
   const onChange =
     (key: keyof LocationQuery) =>
