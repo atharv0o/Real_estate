@@ -3,14 +3,18 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
+from dotenv import load_dotenv
 from algosdk import account, mnemonic, transaction
 from algosdk.logic import get_application_address
 from algosdk.transaction import StateSchema
 
 ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = ROOT.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -19,6 +23,10 @@ from smart_contracts.property_verification import (  # noqa: E402
     compile_approval,
     compile_clear_state,
 )
+
+
+load_dotenv(PROJECT_ROOT / ".env")
+load_dotenv(ROOT / ".env")
 
 
 def compile_source(algod_client, source: str) -> bytes:
@@ -39,9 +47,59 @@ def write_teal_artifacts(approval_teal: str, clear_teal: str) -> None:
     )
 
 
-def deploy_contract() -> dict[str, object]:
-    import os
+def _upsert_env_values(path: Path, values: dict[str, str]) -> None:
+    existing = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    seen: set[str] = set()
+    updated: list[str] = []
 
+    for line in existing:
+        key = line.split("=", 1)[0].strip() if "=" in line and not line.lstrip().startswith("#") else ""
+        if key in values:
+            updated.append(f"{key}={values[key]}")
+            seen.add(key)
+        else:
+            updated.append(line)
+
+    for key, value in values.items():
+        if key not in seen:
+            updated.append(f"{key}={value}")
+
+    path.write_text("\n".join(updated).rstrip() + "\n", encoding="utf-8")
+
+
+def write_deployment_details(result: dict[str, object]) -> dict[str, object]:
+    app_id = str(result["app_id"])
+    tx_id = str(result["tx_id"])
+    contract_address = str(result["contract_address"])
+    deployment = {
+        "network": "testnet",
+        "appId": app_id,
+        "contractAddress": contract_address,
+        "txId": tx_id,
+        "explorerAppUrl": f"https://testnet.algoexplorer.io/application/{app_id}",
+        "explorerTxUrl": f"https://testnet.algoexplorer.io/tx/{tx_id}",
+        "deployedAt": datetime.now(timezone.utc).isoformat(),
+    }
+
+    deployments_dir = ROOT / "deployments"
+    deployments_dir.mkdir(exist_ok=True)
+    (deployments_dir / "testnet.json").write_text(
+        json.dumps(deployment, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    _upsert_env_values(
+        PROJECT_ROOT / ".env",
+        {
+            "APP_ID": app_id,
+            "CONTRACT_ADDRESS": contract_address,
+            "DEPLOY_TX_ID": tx_id,
+        },
+    )
+    return deployment
+
+
+def deploy_contract() -> dict[str, object]:
     phrase = os.getenv("ALGORAND_MNEMONIC", "").strip()
     if not phrase:
         raise RuntimeError("ALGORAND_MNEMONIC is required to deploy the contract")
@@ -93,7 +151,20 @@ def main() -> None:
         raise SystemExit("Only Algorand TestNet deployments are supported")
 
     result = deploy_contract()
-    print(json.dumps({"APP_ID": result["app_id"], "CONTRACT_ADDRESS": result["contract_address"], **result}, indent=2))
+    deployment = write_deployment_details(result)
+    print(
+        json.dumps(
+            {
+                "APP_ID": deployment["appId"],
+                "CONTRACT_ADDRESS": deployment["contractAddress"],
+                "DEPLOY_TX_ID": deployment["txId"],
+                **deployment,
+                "approvalTeal": result["approval_teal"],
+                "clearTeal": result["clear_teal"],
+            },
+            indent=2,
+        )
+    )
 
 
 if __name__ == "__main__":

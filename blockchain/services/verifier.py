@@ -19,7 +19,8 @@ if str(ROOT) not in sys.path:
 from sdk.algo_client import get_algod_client, get_app_id
 
 
-load_dotenv()
+load_dotenv(ROOT.parent / ".env")
+load_dotenv(ROOT / ".env")
 
 
 def _sha256_json(data: dict[str, Any]) -> str:
@@ -134,7 +135,9 @@ def store_verification(record: dict[str, str], retries: int = 2) -> dict[str, An
                 "verified": True,
                 "configured": True,
                 "app_id": app_id,
+                "explorer_app_url": f"https://testnet.algoexplorer.io/application/{app_id}",
                 "tx_id": tx_id,
+                "explorer_tx_url": f"https://testnet.algoexplorer.io/tx/{tx_id}",
                 "record": record,
                 "hash": record["propertyHash"],
             }

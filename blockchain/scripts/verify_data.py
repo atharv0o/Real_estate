@@ -80,6 +80,33 @@ def verify_hashes(
         return {"verified": False, "error": str(exc)}
 
 
+def fetch_verification_history(app_id: int | None = None, limit: int = 10) -> dict[str, Any]:
+    resolved_app_id = app_id or get_app_id()
+    if resolved_app_id is None:
+        raise RuntimeError("APP_ID is required to fetch verification history")
+
+    response = get_indexer_client().search_transactions(
+        application_id=resolved_app_id,
+        limit=min(max(limit, 1), 25),
+        txn_type="appl",
+    )
+    transactions = response.get("transactions", [])
+    return {
+        "appId": resolved_app_id,
+        "transactions": [
+            {
+                "txId": tx.get("id"),
+                "sender": tx.get("sender"),
+                "round": tx.get("confirmed-round"),
+                "timestamp": tx.get("round-time"),
+                "explorerTxUrl": f"https://testnet.algoexplorer.io/tx/{tx.get('id')}",
+            }
+            for tx in transactions
+            if tx.get("id")
+        ],
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Verify property proof hashes stored on Algorand TestNet")
     parser.add_argument("--property-hash", required=True)

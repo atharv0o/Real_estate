@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import os
 
+from pathlib import Path
+
 from dotenv import load_dotenv
 from algosdk.v2client import algod, indexer
 
 
-load_dotenv()
+ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(ROOT.parent / ".env")
+load_dotenv(ROOT / ".env")
 
 DEFAULT_ALGOD_ADDRESS = "https://testnet-api.algonode.cloud"
 DEFAULT_INDEXER_ADDRESS = "https://testnet-idx.algonode.cloud"

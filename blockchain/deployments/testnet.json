@@ -1,0 +1,9 @@
+{
+  "network": "testnet",
+  "appId": "762869297",
+  "contractAddress": "TEFR3OFQYD5WKMEWHUUDD35S4X4IKRSHCIDDJQQWEPSQNV33FWAUBUTSHE",
+  "txId": "IHB7FMCQ2MAMPMWJJK27VEKWBZAMIBBJ4F6AZ4UKTPUH23EFWJEQ",
+  "explorerAppUrl": "https://testnet.algoexplorer.io/application/762869297",
+  "explorerTxUrl": "https://testnet.algoexplorer.io/tx/IHB7FMCQ2MAMPMWJJK27VEKWBZAMIBBJ4F6AZ4UKTPUH23EFWJEQ",
+  "deployedAt": "2026-05-19T18:34:32.709206+00:00"
+}

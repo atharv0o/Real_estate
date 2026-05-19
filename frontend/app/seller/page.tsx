@@ -19,20 +19,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { apiClient } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { truncateAddress, useWallet } from "@/store/useWallet";
 
 const steps = [
   { id: 1, title: "Details", description: "Property metadata" },
   { id: 2, title: "Documents", description: "Proof package" },
-  { id: 3, title: "Blockchain", description: "Review & Mint" }
+  { id: 3, title: "Blockchain", description: "Review & Verify" }
 ];
 
-const mintLogs = [
+const verificationLogs = [
   "Calculating document SHA-256 hash...",
   "Hashing property metadata...",
-  "Sending transaction to Algorand Testnet...",
-  "Success! Asset ID: #ALG-7729-X"
+  "Sending verification proof to Algorand TestNet...",
+  "Blockchain verification proof submitted."
 ];
 
 type SellerPropertyUploadPayload = {
@@ -51,9 +52,10 @@ export default function SellerDashboardPage() {
   const [price, setPrice] = useState("720000");
   const [location, setLocation] = useState("Worli, Mumbai");
   const [fileName, setFileName] = useState("ownership-pack.pdf");
-  const [isMinting, setIsMinting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [visibleLogCount, setVisibleLogCount] = useState(0);
+  const [verificationResult, setVerificationResult] = useState<Record<string, unknown> | null>(null);
   const {
     connectWallet,
     disconnectWallet,
@@ -99,25 +101,34 @@ export default function SellerDashboardPage() {
     if (selectedFile) setFileName(selectedFile.name);
   }
 
-  function handleMint() {
-    if (isMinting || !isConnected) return;
+  async function handleVerify() {
+    if (isVerifying || !isConnected) return;
 
     console.debug("Prepared seller property upload payload", propertyUploadPayload);
 
-    setIsMinting(true);
+    setIsVerifying(true);
     setProgress(0);
     setVisibleLogCount(0);
+    setVerificationResult(null);
 
-    mintLogs.forEach((_, index) => {
+    verificationLogs.forEach((_, index) => {
       window.setTimeout(() => {
         setVisibleLogCount(index + 1);
-        setProgress(Math.round(((index + 1) / mintLogs.length) * 100));
+        setProgress(Math.round(((index + 1) / verificationLogs.length) * 100));
       }, 650 * (index + 1));
     });
 
-    window.setTimeout(() => {
-      setIsMinting(false);
-    }, 650 * mintLogs.length + 450);
+    try {
+      const response = await apiClient.post("/api/verify", propertyUploadPayload);
+      setVerificationResult(response.data);
+      setProgress(100);
+      setVisibleLogCount(verificationLogs.length);
+    } catch (error) {
+      console.warn("Blockchain verification failed.", error);
+      setVerificationResult({ verified: false, error: "Verification request failed" });
+    } finally {
+      setIsVerifying(false);
+    }
   }
 
   return (
@@ -129,10 +140,10 @@ export default function SellerDashboardPage() {
             Seller Dashboard
           </div>
           <h1 className="mt-4 font-display text-3xl font-semibold tracking-normal text-white md:text-5xl">
-            List and mint verified property assets
+            List verified property proofs
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
-            Package listing metadata, legal documents, and Algorand Testnet minting into one controlled seller workflow.
+            Package listing metadata, legal documents, and Algorand TestNet verification into one controlled seller workflow.
           </p>
         </div>
 
@@ -169,7 +180,7 @@ export default function SellerDashboardPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
         <motion.section
           animate={{
-            boxShadow: isMinting
+            boxShadow: isVerifying
               ? "0 0 80px rgba(16,185,129,0.28)"
               : "0 24px 80px rgba(15,23,42,0.14)"
           }}
@@ -229,7 +240,7 @@ export default function SellerDashboardPage() {
                         <div>
                           <h2 className="text-xl font-semibold">Property Details</h2>
                           <p className="mt-1 text-sm text-slate-400">
-                            These fields become the asset metadata payload.
+                            These fields become the verification metadata payload.
                           </p>
                         </div>
                         <label className="block space-y-2">
@@ -312,9 +323,9 @@ export default function SellerDashboardPage() {
                         className="space-y-5"
                       >
                         <div>
-                          <h2 className="text-xl font-semibold">Review & Mint</h2>
+                          <h2 className="text-xl font-semibold">Review & Verify</h2>
                           <p className="mt-1 text-sm text-slate-400">
-                            Confirm the payload before creating the mock Algorand asset.
+                            Confirm the payload before storing the proof on Algorand TestNet.
                           </p>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -334,20 +345,25 @@ export default function SellerDashboardPage() {
                           ))}
                         </div>
                         <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-                          Metadata will be hashed locally before the mock mint transaction is sent to Algorand Testnet.
+                          Metadata and document references are hashed by the backend before the proof is sent through the blockchain microservice.
                         </div>
+                        {typeof verificationResult?.["tx_id"] === "string" && (
+                          <div className="rounded-lg border border-blue-400/20 bg-blue-500/10 p-4 text-sm text-blue-100">
+                            Blockchain Verified: {String(verificationResult["tx_id"]).slice(0, 12)}...
+                          </div>
+                        )}
                         <Button
                           className="w-full bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                          onClick={handleMint}
-                          disabled={isMinting || !isConnected}
-                          title={!isConnected ? "Please Connect Wallet" : "Mint property NFT"}
+                          onClick={handleVerify}
+                          disabled={isVerifying || !isConnected}
+                          title={!isConnected ? "Please Connect Wallet" : "Verify property proof"}
                         >
-                          {isMinting ? (
+                          {isVerifying ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <BadgeCheck className="h-4 w-4" />
                           )}
-                          {isConnected ? "Mint" : "Please Connect Wallet"}
+                          {isConnected ? "Verify on TestNet" : "Please Connect Wallet"}
                         </Button>
                       </motion.div>
                     )}
@@ -389,7 +405,7 @@ export default function SellerDashboardPage() {
               </div>
               <div className="min-h-72 space-y-3 p-5 font-mono text-sm leading-6">
                 <AnimatePresence>
-                  {mintLogs.slice(0, visibleLogCount).map((log) => (
+                  {verificationLogs.slice(0, visibleLogCount).map((log) => (
                     <motion.p
                       key={log}
                       initial={{ opacity: 0, y: 8 }}
@@ -403,7 +419,7 @@ export default function SellerDashboardPage() {
                 </AnimatePresence>
                 {visibleLogCount === 0 && (
                   <p className="text-emerald-700">
-                    $ Awaiting mint command...
+                    $ Awaiting verification command...
                   </p>
                 )}
               </div>
@@ -415,15 +431,15 @@ export default function SellerDashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">Algorand confirmation</p>
-                  <p className="mt-1 text-xs text-slate-500">Mock block finality timer</p>
+                  <p className="mt-1 text-xs text-slate-500">TestNet proof submission</p>
                 </div>
                 <span className="text-sm text-emerald-300">{progress}%</span>
               </div>
               <Progress value={progress} />
               <p className="text-xs text-slate-500">
                 {progress === 100
-                  ? "Asset confirmed on mock Testnet ledger."
-                  : "Progress appears after you click Mint."}
+                  ? "Proof submitted to the Algorand TestNet verification service."
+                  : "Progress appears after you click Verify."}
               </p>
             </CardContent>
           </Card>

@@ -43,6 +43,8 @@ services:
       INDEXER_ADDRESS: ${INDEXER_ADDRESS:-https://testnet-idx.algonode.cloud}
       INDEXER_TOKEN: ${INDEXER_TOKEN:-}
       APP_ID: ${APP_ID:-}
+      CONTRACT_ADDRESS: ${CONTRACT_ADDRESS:-}
+      DEPLOY_TX_ID: ${DEPLOY_TX_ID:-}
       ALGORAND_NODE_URL: ${ALGORAND_NODE_URL:-https://testnet-api.algonode.cloud}
       ALGORAND_NODE_TOKEN: ${ALGORAND_NODE_TOKEN:-}
     ports:
