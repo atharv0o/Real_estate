@@ -35,6 +35,16 @@ const mintLogs = [
   "Success! Asset ID: #ALG-7729-X"
 ];
 
+type SellerPropertyUploadPayload = {
+  walletAddress?: string;
+  propertyData: {
+    title: string;
+    price: string;
+    location: string;
+    documentName: string;
+  };
+};
+
 export default function SellerDashboardPage() {
   const [activeStep, setActiveStep] = useState(1);
   const [title, setTitle] = useState("Skyline Residences");
@@ -49,7 +59,7 @@ export default function SellerDashboardPage() {
     disconnectWallet,
     isConnected,
     isConnecting,
-    userAddress
+    walletAddress
   } = useWallet();
 
   const canGoBack = activeStep > 1;
@@ -65,6 +75,19 @@ export default function SellerDashboardPage() {
     [price]
   );
 
+  const propertyUploadPayload = useMemo<SellerPropertyUploadPayload>(
+    () => ({
+      ...(walletAddress ? { walletAddress } : {}),
+      propertyData: {
+        title,
+        price,
+        location,
+        documentName: fileName
+      }
+    }),
+    [fileName, location, price, title, walletAddress]
+  );
+
   function handleDrop(event: React.DragEvent<HTMLLabelElement>) {
     event.preventDefault();
     const droppedFile = event.dataTransfer.files?.[0];
@@ -78,6 +101,8 @@ export default function SellerDashboardPage() {
 
   function handleMint() {
     if (isMinting || !isConnected) return;
+
+    console.debug("Prepared seller property upload payload", propertyUploadPayload);
 
     setIsMinting(true);
     setProgress(0);
@@ -125,7 +150,7 @@ export default function SellerDashboardPage() {
           <Wallet className="h-4 w-4 text-emerald-400" />
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
-              key={isConnected ? userAddress : "connect"}
+              key={isConnected ? walletAddress : "connect"}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
@@ -134,7 +159,7 @@ export default function SellerDashboardPage() {
               {isConnecting
                 ? "Connecting..."
                 : isConnected
-                  ? truncateAddress(userAddress)
+                  ? truncateAddress(walletAddress)
                   : "Connect Pera Wallet"}
             </motion.span>
           </AnimatePresence>

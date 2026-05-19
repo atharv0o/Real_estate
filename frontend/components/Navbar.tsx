@@ -23,7 +23,7 @@ export function Navbar() {
     initializeWalletSession,
     isConnected,
     isConnecting,
-    userAddress
+    walletAddress
   } = useWallet();
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export function Navbar() {
             <Wallet className="h-4 w-4" />
             <AnimatePresence mode="wait" initial={false}>
               <motion.span
-                key={isConnected ? userAddress : "connect-wallet"}
+                key={isConnected ? walletAddress : "connect-wallet"}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
@@ -82,7 +82,7 @@ export function Navbar() {
                 {isConnecting
                   ? "Connecting..."
                   : isConnected
-                    ? truncateAddress(userAddress)
+                    ? truncateAddress(walletAddress)
                     : "Connect Wallet"}
               </motion.span>
             </AnimatePresence>

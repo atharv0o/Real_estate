@@ -6,7 +6,10 @@ import { create } from "zustand";
 const peraWallet =
   typeof window !== "undefined" ? new PeraWalletConnect() : null;
 
+let disconnectHandlerBoundTo: unknown = null;
+
 type WalletState = {
+  walletAddress: string | null;
   userAddress: string | null;
   isConnected: boolean;
   isConnecting: boolean;
@@ -21,9 +24,14 @@ function getPrimaryAddress(accounts: string[]) {
 }
 
 function bindDisconnectHandler(set: (state: Partial<WalletState>) => void) {
-  peraWallet?.connector?.on("disconnect", () => {
-    set({ userAddress: null, isConnected: false });
+  const connector = peraWallet?.connector;
+
+  if (!connector || connector === disconnectHandlerBoundTo) return;
+
+  connector.on("disconnect", () => {
+    set({ walletAddress: null, userAddress: null, isConnected: false });
   });
+  disconnectHandlerBoundTo = connector;
 }
 
 export function truncateAddress(address: string | null) {
@@ -32,6 +40,7 @@ export function truncateAddress(address: string | null) {
 }
 
 export const useWallet = create<WalletState>((set, get) => ({
+  walletAddress: null,
   userAddress: null,
   isConnected: false,
   isConnecting: false,
@@ -43,29 +52,53 @@ export const useWallet = create<WalletState>((set, get) => ({
     try {
       set({ isConnecting: true });
       const accounts = await peraWallet.connect();
-      const userAddress = getPrimaryAddress(accounts);
+      const walletAddress = getPrimaryAddress(accounts);
 
       set({
-        userAddress,
-        isConnected: Boolean(userAddress),
+        walletAddress,
+        userAddress: walletAddress,
+        isConnected: Boolean(walletAddress),
         hasInitialized: true
       });
       bindDisconnectHandler(set);
+    } catch (error) {
+      console.warn("Pera wallet connection failed or was cancelled.", error);
+      set({
+        walletAddress: null,
+        userAddress: null,
+        isConnected: false,
+        hasInitialized: true
+      });
     } finally {
       set({ isConnecting: false });
     }
   },
 
   disconnectWallet: async () => {
-    if (!peraWallet) return;
+    if (!peraWallet) {
+      set({
+        walletAddress: null,
+        userAddress: null,
+        isConnected: false,
+        isConnecting: false,
+        hasInitialized: true
+      });
+      return;
+    }
 
-    await peraWallet.disconnect();
-    set({
-      userAddress: null,
-      isConnected: false,
-      isConnecting: false,
-      hasInitialized: true
-    });
+    try {
+      await peraWallet.disconnect();
+    } catch (error) {
+      console.warn("Pera wallet disconnect failed.", error);
+    } finally {
+      set({
+        walletAddress: null,
+        userAddress: null,
+        isConnected: false,
+        isConnecting: false,
+        hasInitialized: true
+      });
+    }
   },
 
   initializeWalletSession: async () => {
@@ -74,17 +107,20 @@ export const useWallet = create<WalletState>((set, get) => ({
     try {
       set({ isConnecting: true });
       const accounts = await peraWallet.reconnectSession();
-      const userAddress = getPrimaryAddress(accounts);
+      const walletAddress = getPrimaryAddress(accounts);
 
       set({
-        userAddress,
-        isConnected: Boolean(userAddress),
+        walletAddress,
+        userAddress: walletAddress,
+        isConnected: Boolean(walletAddress),
         hasInitialized: true
       });
 
-      if (userAddress) bindDisconnectHandler(set);
-    } catch {
+      if (walletAddress) bindDisconnectHandler(set);
+    } catch (error) {
+      console.warn("Pera wallet session reconnect failed.", error);
       set({
+        walletAddress: null,
         userAddress: null,
         isConnected: false,
         hasInitialized: true

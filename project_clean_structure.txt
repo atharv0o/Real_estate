@@ -1,156 +1,244 @@
 D:\hackathon_projects\Real_estate
-+---backend
-|   +---app
-|   |   +---config
-|   |   |   +---constants.py
-|   |   |   \---settings.py
-|   |   +---db
-|   |   |   \---postgres.py
-|   |   +---models
-|   |   |   +---request_models.py
-|   |   |   \---response_models.py
-|   |   +---routes
-|   |   |   +---__init__.py
-|   |   |   +---ai.py
-|   |   |   +---property.py
-|   |   |   +---rag_query.py
-|   |   |   +---search.py
-|   |   |   \---verify.py
-|   |   +---services
-|   |   |   +---__init__.py
-|   |   |   +---ai_client.py
-|   |   |   +---api_response.py
-|   |   |   +---blockchain_service.py
-|   |   |   +---data_pipeline.py
-|   |   |   +---data_service.py
-|   |   |   +---geo_service.py
-|   |   |   +---geo_utils.py
-|   |   |   +---land_service.py
-|   |   |   +---maps_service.py
-|   |   |   +---property_service.py
-|   |   |   +---rag_connector.py
-|   |   |   \---verify_service.py
-|   |   +---__init__.py
-|   |   \---main.py
-|   +---data
-|   |   \---properties.json
-|   +---instructions.txt
-|   \---requirements.txt
-+---blockchain
-|   +---scripts
-|   |   +---deploy.py
-|   |   \---verify_data.py
-|   +---sdk
-|   |   +---account.py
-|   |   \---algo_client.py
-|   +---services
-|   |   +---__init__.py
-|   |   \---verifier.py
-|   +---smart_contracts
-|   |   \---property_verification.teal
-|   +---api.py
-|   \---requirements.txt
-+---data_pipeline
-|   +---collectors
-|   |   +---__init__.py
-|   |   +---govt_registry_collector.py
-|   |   \---listing_collector.py
-|   +---loaders
-|   |   +---__init__.py
-|   |   +---db_loader.py
-|   |   \---vector_loader.py
-|   +---processors
-|   |   +---__init__.py
-|   |   +---deduplicator.py
-|   |   +---geo_encoder.py
-|   |   \---validator.py
-|   +---__init__.py
-|   +---bootstrap.py
-|   +---config.py
-|   +---requirements.txt
-|   \---scheduler.py
-+---docker
-|   +---backend.Dockerfile
-|   +---data_pipeline.Dockerfile
-|   +---docker-compose.yml
-|   +---frontend.Dockerfile
-|   \---rag.Dockerfile
-+---frontend
-|   +---app
-|   |   +---property
-|   |   |   \---[id]
-|   |   |       +---page.tsx
-|   |   |       +---PropertyDetailClient.tsx
-|   |   |       \---PropertyDetailLiveClient.tsx
-|   |   +---search
-|   |   |   +---page.tsx
-|   |   |   \---SearchContent.tsx
-|   |   +---globals.css
-|   |   +---HomeClient.tsx
-|   |   +---layout.tsx
-|   |   \---page.tsx
-|   +---components
-|   |   +---BlockchainBadge.tsx
-|   |   +---Charts.tsx
-|   |   +---ChatBox.tsx
-|   |   +---Filters.tsx
-|   |   +---FreshnessScore.tsx
-|   |   +---Map.tsx
-|   |   +---MapView.tsx
-|   |   +---PriceChart.tsx
-|   |   +---PropertyCard.tsx
-|   |   +---PropertyResultCard.tsx
-|   |   +---SearchBar.tsx
-|   |   \---Skeletons.tsx
-|   +---lib
-|   |   +---api.ts
-|   |   +---constants.ts
-|   |   \---hooks.ts
-|   +---public
-|   |   \---.gitkeep
-|   +---services
-|   |   \---api.js
-|   +---store
-|   |   \---usePropertyStore.ts
-|   +---styles
-|   |   \---.gitkeep
-|   +---types
-|   |   \---property.ts
-|   +---.eslintrc.json
-|   +---.gitignore
-|   +---instructions.txt
-|   +---new project.txt
-|   +---next.config.mjs
-|   +---next-env.d.ts
-|   +---package.json
-|   +---package-lock.json
-|   +---postcss.config.mjs
-|   +---tailwind.config.ts
-|   \---tsconfig.json
-+---rag_engine
-|   +---config
-|   |   \---settings.py
-|   +---embeddings
-|   |   +---embedder.py
-|   |   \---vector_store.py
-|   +---generation
-|   |   +---llm_client.py
-|   |   \---prompt_templates.py
-|   +---ingestion
-|   |   +---chunker.py
-|   |   +---cleaner.py
-|   |   \---scraper.py
-|   +---pipeline
-|   |   +---rag_pipeline.py
-|   |   \---scheduler.py
-|   +---retrieval
-|   |   +---ranker.py
-|   |   \---retriever.py
-|   +---rag_api.py
-|   \---requirements.txt
-+---shared
-|   \---logger.py
-+---.gitignore
-+---new project.txt
-+---project_clean_structure.txt
-\---project_full_structure.txt
+|-- .dockerignore
+|-- .env                         # local environment values; do not commit secrets
+|-- .env.example                 # sample environment variables
+|-- .gitignore
+|-- docker-compose.yml           # root multi-service compose file
+|-- project_clean_structure.txt  # cleaned source/config structure
+|-- .vscode/
+|   `-- settings.json
+|-- app/
+|   `-- __init__.py              # root Python package marker/shared app metadata
+|-- apps/
+|   `-- web/                     # currently empty placeholder
+|-- backend/                     # FastAPI backend API service
+|   |-- .dockerignore
+|   |-- Dockerfile
+|   |-- instructions.txt
+|   |-- requirements.txt
+|   |-- app/
+|   |   |-- __init__.py
+|   |   |-- main.py              # FastAPI application entry point
+|   |   |-- config/
+|   |   |   |-- __init__.py
+|   |   |   |-- constants.py
+|   |   |   `-- settings.py
+|   |   |-- core/
+|   |   |   |-- __init__.py
+|   |   |   `-- logging.py
+|   |   |-- db/
+|   |   |   |-- __init__.py
+|   |   |   `-- postgres.py
+|   |   |-- models/
+|   |   |   |-- __init__.py
+|   |   |   |-- request_models.py
+|   |   |   `-- response_models.py
+|   |   |-- routes/
+|   |   |   |-- __init__.py
+|   |   |   |-- ai.py
+|   |   |   |-- property.py
+|   |   |   |-- rag_query.py
+|   |   |   |-- search.py
+|   |   |   `-- verify.py
+|   |   `-- services/
+|   |       |-- __init__.py
+|   |       |-- ai_client.py
+|   |       |-- api_response.py
+|   |       |-- blockchain_service.py
+|   |       |-- data_pipeline.py
+|   |       |-- data_service.py
+|   |       |-- geo_service.py
+|   |       |-- geo_utils.py
+|   |       |-- land_service.py
+|   |       |-- maps_service.py
+|   |       |-- property_service.py
+|   |       |-- rag_connector.py
+|   |       |-- search_cache.py
+|   |       |-- search_index.py
+|   |       `-- verify_service.py
+|   `-- data/
+|       `-- properties.json
+|-- blockchain/                  # Algorand verification service
+|   |-- .dockerignore
+|   |-- Dockerfile
+|   |-- api.py                   # blockchain API entry point
+|   |-- requirements.txt
+|   |-- scripts/
+|   |   |-- deploy.py
+|   |   `-- verify_data.py
+|   |-- sdk/
+|   |   |-- account.py
+|   |   `-- algo_client.py
+|   |-- services/
+|   |   |-- __init__.py
+|   |   `-- verifier.py
+|   `-- smart_contracts/
+|       `-- property_verification.teal
+|-- data_pipeline/               # listing ingestion, cleaning, DB/vector loading
+|   |-- .dockerignore
+|   |-- Dockerfile
+|   |-- __init__.py
+|   |-- bootstrap.py
+|   |-- config.py
+|   |-- import_csv_listings.py
+|   |-- logging_utils.py
+|   |-- requirements.txt
+|   |-- scheduler.py
+|   |-- collectors/
+|   |   |-- __init__.py
+|   |   |-- govt_registry_collector.py
+|   |   `-- listing_collector.py
+|   |-- db/
+|   |   |-- __init__.py
+|   |   `-- postgres.py
+|   |-- loaders/
+|   |   |-- __init__.py
+|   |   |-- db_loader.py
+|   |   `-- vector_loader.py
+|   `-- processors/
+|       |-- __init__.py
+|       |-- deduplicator.py
+|       |-- geo_encoder.py
+|       |-- property_processor.py
+|       `-- validator.py
+|-- docker/                      # alternate/service-specific Docker setup
+|   |-- .dockerignore
+|   |-- backend.Dockerfile
+|   |-- blockchain.Dockerfile
+|   |-- data_pipeline.Dockerfile
+|   |-- docker-compose.yml
+|   |-- frontend.Dockerfile
+|   `-- rag.Dockerfile
+|-- frontend/                    # Next.js 14 frontend
+|   |-- .dockerignore
+|   |-- .eslintrc.json
+|   |-- .gitignore
+|   |-- Dockerfile
+|   |-- components.json
+|   |-- instructions.txt
+|   |-- new project.txt
+|   |-- next-env.d.ts
+|   |-- next.config.mjs
+|   |-- package-lock.json
+|   |-- package.json
+|   |-- postcss.config.mjs
+|   |-- tailwind.config.ts
+|   |-- tsconfig.json
+|   |-- tsconfig.tsbuildinfo      # TypeScript build cache
+|   |-- app/
+|   |   |-- HomeClient.tsx
+|   |   |-- globals.css
+|   |   |-- layout.tsx
+|   |   |-- page.tsx
+|   |   |-- analytics/
+|   |   |   `-- page.tsx
+|   |   |-- marketplace/
+|   |   |   |-- page.tsx
+|   |   |   `-- [id]/
+|   |   |       `-- page.tsx
+|   |   |-- property/
+|   |   |   `-- [id]/
+|   |   |       |-- page.tsx
+|   |   |       |-- PropertyBackButton.tsx
+|   |   |       |-- PropertyDetailClient.tsx
+|   |   |       `-- PropertyDetailLiveClient.tsx
+|   |   |-- search/
+|   |   |   |-- page.tsx
+|   |   |   `-- SearchContent.tsx
+|   |   `-- seller/
+|   |       `-- page.tsx
+|   |-- components/
+|   |   |-- BlockchainBadge.tsx
+|   |   |-- Charts.tsx
+|   |   |-- ChatBox.tsx
+|   |   |-- Filters.tsx
+|   |   |-- FreshnessScore.tsx
+|   |   |-- GoogleMapView.tsx
+|   |   |-- Map.tsx
+|   |   |-- MapView.tsx
+|   |   |-- Navbar.tsx
+|   |   |-- PriceChart.tsx
+|   |   |-- PropertyCard.tsx
+|   |   |-- PropertyResultCard.tsx
+|   |   |-- SearchBar.tsx
+|   |   |-- Skeletons.tsx
+|   |   |-- ThemeProvider.tsx
+|   |   |-- ThemeToggle.tsx
+|   |   |-- AI/
+|   |   |   `-- SmartGuide.tsx
+|   |   `-- ui/
+|   |       |-- accordion.tsx
+|   |       |-- button.tsx
+|   |       |-- card.tsx
+|   |       |-- checkbox.tsx
+|   |       |-- input.tsx
+|   |       |-- progress.tsx
+|   |       |-- scroll-area.tsx
+|   |       |-- select.tsx
+|   |       |-- slider.tsx
+|   |       `-- switch.tsx
+|   |-- lib/
+|   |   |-- api.ts
+|   |   |-- constants.ts
+|   |   |-- hooks.ts
+|   |   `-- utils.ts
+|   |-- public/
+|   |   `-- .gitkeep
+|   |-- services/
+|   |   `-- api.js
+|   |-- store/
+|   |   |-- usePropertyStore.ts
+|   |   `-- useWallet.ts
+|   |-- styles/
+|   |   `-- .gitkeep
+|   `-- types/
+|       `-- property.ts
+|-- rag_engine/                  # RAG API, ingestion, embeddings, retrieval, generation
+|   |-- .dockerignore
+|   |-- Dockerfile
+|   |-- __init__.py
+|   |-- rag_api.py                # RAG FastAPI entry point
+|   |-- requirements.txt
+|   |-- config/
+|   |   |-- __init__.py
+|   |   `-- settings.py
+|   |-- embeddings/
+|   |   |-- __init__.py
+|   |   |-- embedder.py
+|   |   `-- vector_store.py
+|   |-- generation/
+|   |   |-- __init__.py
+|   |   |-- llm_client.py
+|   |   `-- prompt_templates.py
+|   |-- ingestion/
+|   |   |-- __init__.py
+|   |   |-- chunker.py
+|   |   |-- cleaner.py
+|   |   |-- land_scraper.py
+|   |   |-- rera_scraper.py
+|   |   `-- scraper.py
+|   |-- pipeline/
+|   |   |-- __init__.py
+|   |   |-- rag_pipeline.py
+|   |   `-- scheduler.py
+|   `-- retrieval/
+|       |-- __init__.py
+|       |-- ranker.py
+|       `-- retriever.py
+`-- shared/
+    `-- logger.py
+
+Excluded from this clean structure:
+|-- .git/                        # repository metadata
+|-- frontend/node_modules/        # installed npm dependencies
+|-- frontend/.next/               # Next.js build output
+|-- **/__pycache__/               # Python bytecode caches
+|-- *.pyc                         # Python bytecode files
+
+Service map:
+|-- postgres: PostgreSQL 15 database, exposed on 5432
+|-- backend: FastAPI backend, exposed on 8000
+|-- rag_engine: RAG API service, exposed on 8001
+|-- blockchain: Algorand verification API, exposed on 8002
+|-- data_pipeline: ingestion/processing worker service
+`-- frontend: Next.js web app, exposed on 3000
