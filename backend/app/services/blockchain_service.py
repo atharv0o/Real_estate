@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import time
 
 import requests
 
@@ -11,6 +12,8 @@ from app.services.search_cache import get_cached, make_cache_key, set_cached
 
 logger = get_logger(__name__)
 BLOCKCHAIN_API = os.getenv("BLOCKCHAIN_API", "http://127.0.0.1:8002").rstrip("/")
+BLOCKCHAIN_TIMEOUT_SECONDS = float(os.getenv("BLOCKCHAIN_TIMEOUT_SECONDS", "3"))
+BLOCKCHAIN_RETRIES = int(os.getenv("BLOCKCHAIN_RETRIES", "1"))
 
 
 def compute_record_hash(title: str, location: str, price: str | int | float) -> str:
@@ -23,16 +26,23 @@ def verify_land_record(data: dict, service_url: str | None = None, enabled: bool
         return {"verified": False, "skipped": True, "reason": "blockchain hook disabled"}
 
     target_url = service_url or f"{BLOCKCHAIN_API}/verify"
-    try:
-        response = requests.post(target_url, json=data, timeout=10)
-        response.raise_for_status()
-        payload = response.json()
-        if isinstance(payload, dict):
-            return payload
-        return {"verified": False, "error": "unexpected_blockchain_response"}
-    except Exception as exc:
-        logger.warning("Blockchain verification request failed: %s", exc)
-        return {"verified": False, "error": str(exc)}
+    last_error: Exception | None = None
+    for attempt in range(BLOCKCHAIN_RETRIES + 1):
+        try:
+            response = requests.post(target_url, json=data, timeout=BLOCKCHAIN_TIMEOUT_SECONDS)
+            response.raise_for_status()
+            payload = response.json()
+            if isinstance(payload, dict):
+                return payload
+            return {"verified": False, "error": "unexpected_blockchain_response"}
+        except Exception as exc:
+            last_error = exc
+            if attempt < BLOCKCHAIN_RETRIES:
+                time.sleep(0.4 * (attempt + 1))
+                continue
+
+    logger.warning("Blockchain verification request failed: %s", last_error)
+    return {"verified": False, "error": str(last_error)}
 
 
 def verify_property(data: dict) -> dict:

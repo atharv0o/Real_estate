@@ -1,4 +1,6 @@
 fastapi==0.111.0
 uvicorn[standard]==0.30.0
-py-algorand-sdk==2.6.1
+py-algorand-sdk==2.11.1
+pyteal==0.27.0
+algokit==2.10.2
 python-dotenv==1.0.1

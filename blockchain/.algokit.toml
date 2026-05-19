@@ -1,0 +1,10 @@
+[project]
+type = "contract"
+name = "real-estate-property-verification"
+
+[project.deploy]
+command = "python scripts/deploy.py testnet"
+
+[project.deploy.testnet]
+command = "python scripts/deploy.py testnet"
+environment_secrets = ["ALGORAND_MNEMONIC"]

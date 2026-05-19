@@ -4,6 +4,11 @@ import uvicorn
 
 app = FastAPI()
 
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "service": "blockchain"}
+
 @app.post("/verify")
 def verify(data: dict):
     return verify_property(data)

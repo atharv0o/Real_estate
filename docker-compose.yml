@@ -38,6 +38,11 @@ services:
       dockerfile: docker/blockchain.Dockerfile
     environment:
       ALGORAND_MNEMONIC: ${ALGORAND_MNEMONIC:-}
+      ALGOD_ADDRESS: ${ALGOD_ADDRESS:-https://testnet-api.algonode.cloud}
+      ALGOD_TOKEN: ${ALGOD_TOKEN:-}
+      INDEXER_ADDRESS: ${INDEXER_ADDRESS:-https://testnet-idx.algonode.cloud}
+      INDEXER_TOKEN: ${INDEXER_TOKEN:-}
+      APP_ID: ${APP_ID:-}
       ALGORAND_NODE_URL: ${ALGORAND_NODE_URL:-https://testnet-api.algonode.cloud}
       ALGORAND_NODE_TOKEN: ${ALGORAND_NODE_TOKEN:-}
     ports:
@@ -58,6 +63,8 @@ services:
       RAG_QUERY_URL: http://rag_engine:8001/rag-query
       RAG_REFRESH_URL: http://rag_engine:8001/refresh-index
       BLOCKCHAIN_API: http://blockchain:8002
+      BLOCKCHAIN_TIMEOUT_SECONDS: 3
+      BLOCKCHAIN_RETRIES: 1
       LOG_LEVEL: INFO
     depends_on:
       postgres:
