@@ -22,6 +22,7 @@ An enterprise-grade, microservices-driven platform engineered to revolutionize p
 <details>
 <summary>Click to expand</summary>
 
+- [Hackathon Blockchain Submission Details](#-hackathon-blockchain-submission-details)
 - [Demo Preview](#-demo-preview)
 - [Key Highlights](#-key-highlights)
 - [Features](#-features)
@@ -46,10 +47,165 @@ An enterprise-grade, microservices-driven platform engineered to revolutionize p
 
 ---
 
+## 🏆 Hackathon Blockchain Submission Details
+
+### Project
+**AI + RAG + Real Estate Platform** with Algorand TestNet property verification.
+
+### Network Status
+- **Network**: Algorand TestNet
+- **Status**: Deployed and proof-write verified
+- **Node Provider**: AlgoNode TestNet
+- **Algod Endpoint**: https://testnet-api.algonode.cloud
+- **Indexer Endpoint**: https://testnet-idx.algonode.cloud
+- **Explorer**: https://testnet.algoexplorer.io
+
+### Contract Details
+- **Smart Contract**: Property Verification Smart Contract
+- **Purpose**: Store a lightweight verification proof for a seller property listing.
+- **APP_ID**: `762869297`
+- **CONTRACT_ADDRESS**: `TEFR3OFQYD5WKMEWHUUDD35S4X4IKRSHCIDDJQQWEPSQNV33FWAUBUTSHE`
+- **DEPLOY_TX_ID**: `IHB7FMCQ2MAMPMWJJK27VEKWBZAMIBBJ4F6AZ4UKTPUH23EFWJEQ`
+
+### Explorer Links
+- **Application**: [AlgoExplorer Application 762869297](https://testnet.algoexplorer.io/application/762869297)
+- **Deployment Transaction**: [AlgoExplorer Deploy TX](https://testnet.algoexplorer.io/tx/IHB7FMCQ2MAMPMWJJK27VEKWBZAMIBBJ4F6AZ4UKTPUH23EFWJEQ)
+
+### Live Proof Transaction
+- **Proof TX Hash**: `RLEP67JTGESSQGHJYMTOQTFAIFWGT7I3DCU3YWN3XQ7ULWGEXVXQ`
+- **Proof TX Explorer**: [AlgoExplorer Proof TX](https://testnet.algoexplorer.io/tx/RLEP67JTGESSQGHJYMTOQTFAIFWGT7I3DCU3YWN3XQ7ULWGEXVXQ)
+
+### Stored Proof Fields
+The contract stores only hashes and proof metadata:
+- `propertyId`
+- `propertyHash`
+- `documentHash`
+- `walletAddress`
+- `timestamp`
+
+### Latest Verified Demo Record
+- **propertyId**: `demo-skyline-001`
+- **propertyHash**: `99f30901a195b2f300d460dd79a5dfbc1985562dd9be7696c09537ee7dadb105`
+- **documentHash**: `demo-document-hash`
+- **walletAddress**: `DEMO-WALLET-ADDRESS`
+- **timestamp**: `1779215679`
+
+### Wallet Integration Details
+- **Ecosystem Integration Used**: Pera Wallet SDK
+- **Package**: `@perawallet/connect`
+- **Frontend Store**: `frontend/store/useWallet.ts`
+- **Navbar Integration**: `frontend/components/Navbar.tsx`
+- **Seller Flow Integration**: `frontend/app/seller/page.tsx`
+
+### Wallet Features
+- Connect Pera Wallet
+- Approve connection in Pera popup
+- Show shortened wallet address in UI
+- Reconnect existing Pera session
+- Disconnect wallet
+- Keep `walletAddress` optional in seller verification payload
+
+### Blockchain Architecture
+- Frontend Next.js app
+- `->` FastAPI backend
+- `->` `backend/app/services/verify_service.py`
+- `->` `backend/app/services/blockchain_service.py`
+- `->` blockchain microservice at `http://blockchain:8002/verify`
+- `->` Algorand TestNet
+
+The backend does not talk directly to Algorand. All Algorand SDK calls stay inside the blockchain microservice.
+
+### Verification Workflow
+1. Seller connects Pera Wallet.
+2. Seller enters property metadata and document reference.
+3. Frontend sends an optional `walletAddress` plus propertyData to `/api/verify`.
+4. Backend generates `SHA256(property_json)`.
+5. Backend generates `SHA256(document_file` or document reference when no file bytes are provided).
+6. Backend forwards proof payload to the blockchain microservice.
+7. Blockchain microservice submits an `ApplicationNoOp` transaction to APP_ID `762869297`.
+8. Smart contract stores `propertyId`, `propertyHash`, `documentHash`, `walletAddress`, and `timestamp`.
+9. UI shows Blockchain Verified after `tx_id` is returned.
+10. Verification can be checked with `blockchain/scripts/verify_data.py`.
+11. Verification history is available from the blockchain microservice at `/history`.
+
+### Smart Contract Purpose
+The PyTeal smart contract provides a minimal immutable TestNet proof layer for real estate verification. It intentionally does not implement NFTs, escrow, tokenization, DAO logic, payments, images, PDFs, embeddings, AI data, search data, or analytics.
+
+### Deployment Commands
+
+**Install frontend dependency:**
+```bash
+cd frontend
+npm install @perawallet/connect
+```
+
+**Install blockchain dependencies:**
+```bash
+cd blockchain
+pip install -r requirements.txt
+```
+
+**Deploy to Algorand TestNet:**
+```bash
+cd D:\hackathon_projects\Real_estate
+python blockchain\scripts\deploy.py testnet
+```
+
+**AlgoKit-compatible deployment command for submission docs:**
+```bash
+algokit project deploy testnet
+```
+
+**Run Docker stack:**
+```bash
+cd D:\hackathon_projects\Real_estate
+docker compose up --build
+```
+
+**Verify stored hashes:**
+```bash
+cd D:\hackathon_projects\Real_estate
+python blockchain\scripts\verify_data.py --property-hash 99f30901a195b2f300d460dd79a5dfbc1985562dd9be7696c09537ee7dadb105 --document-hash demo-document-hash
+```
+
+### Required Submission Content
+- **APP ID**: `762869297`
+- **Contract Address**: `TEFR3OFQYD5WKMEWHUUDD35S4X4IKRSHCIDDJQQWEPSQNV33FWAUBUTSHE`
+- **Deploy TX Hash**: `IHB7FMCQ2MAMPMWJJK27VEKWBZAMIBBJ4F6AZ4UKTPUH23EFWJEQ`
+- **Proof TX Hash**: `RLEP67JTGESSQGHJYMTOQTFAIFWGT7I3DCU3YWN3XQ7ULWGEXVXQ`
+- **Network**: Algorand TestNet
+- **Explorer App Link**: [Application 762869297](https://testnet.algoexplorer.io/application/762869297)
+- **Explorer Deploy TX Link**: [Deploy TX](https://testnet.algoexplorer.io/tx/IHB7FMCQ2MAMPMWJJK27VEKWBZAMIBBJ4F6AZ4UKTPUH23EFWJEQ)
+- **Explorer Proof TX Link**: [Proof TX](https://testnet.algoexplorer.io/tx/RLEP67JTGESSQGHJYMTOQTFAIFWGT7I3DCU3YWN3XQ7ULWGEXVXQ)
+- **Ecosystem Integration**: Pera Wallet SDK for wallet connection
+
+### Demo Flow
+1. Connect Pera Wallet
+2. Approve connection
+3. Wallet address becomes visible
+4. Seller uploads or selects property document
+5. AI trust score remains available in existing app flow
+6. Property hash generated by backend
+7. Document hash generated by backend
+8. Verification stored on Algorand TestNet
+9. Blockchain Verified badge/result visible
+10. Open AlgoExplorer application and transaction links
+11. Show live app and proof transaction
+
+### Breakage Prevention Notes
+- Existing routes were preserved.
+- Existing frontend layout and Tailwind classes were preserved.
+- Existing FastAPI service boundary was preserved.
+- Existing Docker services, ports, networking, and hot reload assumptions were preserved.
+- RAG, search, and data pipeline services were not refactored.
+- Only minimal blockchain-specific integration points were changed.
+
+---
+
 ## 🎥 Demo Preview
 
-*(Placeholder for Demo GIF/Video)*  
-> `<img src="docs/demo.gif" alt="App Demo" width="800" />`
+Watch the full demo on YouTube:
+[![Demo Video](https://img.youtube.com/vi/bn2UhVcfqh8/0.jpg)](https://youtu.be/bn2UhVcfqh8?si=iDUAAlYLUnXuN8va)
 
 ---
 
