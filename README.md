@@ -5,7 +5,6 @@
 
   **Transforming Real Estate with Intelligent AI and Immutable Blockchain Trust**
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Next.js](https://img.shields.io/badge/Next.js-black?logo=next.js)](https://nextjs.org/)
   [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
   [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://docker.com/)
@@ -41,8 +40,7 @@ An enterprise-grade, microservices-driven platform engineered to revolutionize p
 - [Future Improvements](#-future-improvements)
 - [Troubleshooting & FAQ](#-troubleshooting--faq)
 - [Contribution Guide](#-contribution-guide)
-- [License](#-license)
-- [Author](#-author)
+- [Authors](#-authors)
 
 </details>
 
@@ -271,8 +269,8 @@ Real_estate/
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/real-estate-ai-platform.git
-   cd real-estate-ai-platform
+   git clone https://github.com/atharv0o/Real_estate.git
+   cd Real_estate
    ```
 
 ---
@@ -408,18 +406,11 @@ We welcome contributions from the community!
 
 ---
 
-## 📄 License
+## 👥 Authors
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more details.
-
----
-
-## 👤 Author
-
-**Project maintainer and lead developer.**
-
-[![GitHub](https://img.shields.io/badge/GitHub-Profile-181717?style=flat&logo=github)](https://github.com/)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-0A66C2?style=flat&logo=linkedin)](https://linkedin.com/)
+- **Atharv Chivte** - [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-0A66C2?style=flat&logo=linkedin)](https://www.linkedin.com/in/atharvchivate/)
+- **Aseem Gulbarga** - [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-0A66C2?style=flat&logo=linkedin)](https://www.linkedin.com/in/aseem-gulbarga-5704b12b0/)
+- **Manoj Jeur** - [![LinkedIn](https://img.shields.io/badge/LinkedIn-Profile-0A66C2?style=flat&logo=linkedin)](https://www.linkedin.com/in/manoj-jeur-3845b02b0/)
 
 ---
 <div align="center">
